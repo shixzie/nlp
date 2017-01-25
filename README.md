@@ -1,4 +1,4 @@
-[![GoDoc](https://godoc.org/github.com/Shixzie/nlp?status.svg)](https://godoc.org/github.com/Shixzie/nlp)
+[![GoDoc](https://godoc.org/github.com/Shixzie/nlp?status.svg)](https://godoc.org/github.com/Shixzie/nlp) [![Go Report Card](https://goreportcard.com/badge/github.com/Shixzie/nlp)](https://goreportcard.com/report/github.com/Shixzie/nlp)
 
 # nlp
 
@@ -42,10 +42,10 @@ if err != nil {
 tells nlp that inside the text may be a Song.Name and a Song.Artist.
 
 The samples are the key part about nlp, not just because they set the *limits*
-between *keywords* but also because they will be used when choosing which model
-to use to handle an expression.
+between *keywords* but also because they will be used to choose which model 
+use to handle an expression.
 
-Samples must have an special syntax to set those *limits* and *keywords*.
+Samples must have a special syntax to set those *limits* and *keywords*.
 ```go
 songSamples := []string{
 	"play {Name} by {Artist}",
@@ -131,12 +131,11 @@ hello sir can you pleeeeeease play King by  Lauren Aquilina
                                        keywords
 ```
 
-`{Name}` would be replaced with `King`
-`{Artist}` would be replaced with `Lauren Aquilina`
-`trash` would be ignored as well as the *limits* `play` and `by`
-
+`{Name}` would be replaced with `King`, 
+`{Artist}` would be replaced with `Lauren Aquilina`, 
+`trash` would be ignored as well as the *limits* `play` and `by`, 
 and then a filled struct with the type used to register the model (`Song`) 
-( `Song.Name` being `{Name}` and `Song.Artist` beign `{Artist}` )
+( `Song.Name` being `{Name}` and `Song.Artist` beign `{Artist}` ) 
 will be returned.
 
 ## Usage

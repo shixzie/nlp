@@ -6,7 +6,7 @@ import (
 	"github.com/Shixzie/nlp"
 )
 
-func ExampleRegisterModel() {
+func ExampleNL_RegisterModel() {
 	type song struct {
 		Name   string
 		Artist string
@@ -23,7 +23,7 @@ func ExampleRegisterModel() {
 	}
 }
 
-func ExampleClassify() {
+func ExampleClassifier_Classify() {
 	positiveSamples := []string{
 		"i love you",
 		"i like chocolate",

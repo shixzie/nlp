@@ -1,4 +1,4 @@
-// Package nlp provides general purpose Natural Language Proccessing.
+// Package nlp provides general purpose Natural Language Processing.
 package nlp
 
 import (
@@ -34,7 +34,7 @@ func New(output ...io.Writer) *NL {
 func (nl *NL) P(expr string) interface{} { return nl.models[nl.naive.Predict(expr)].fit(expr) }
 
 // Learn maps the models samples to the models themselves and
-// returns an error if something ocurred while learning
+// returns an error if something occurred while learning
 func (nl *NL) Learn() error {
 	if len(nl.models) > 0 {
 		stream := make(chan base.TextDatapoint, 100)
@@ -58,7 +58,7 @@ func (nl *NL) Learn() error {
 		for {
 			err := <-errors
 			if err != nil {
-				return fmt.Errorf("error ocurred while learning: %s", err)
+				return fmt.Errorf("error occurred while learning: %s", err)
 			}
 			// training is done!
 			break
@@ -142,7 +142,7 @@ func (m *model) learn() error {
 							if i == wl-1 { // {}
 								k = key{left: "", word: keyword, right: "", sample: sid, field: fid}
 							} else { // {} ...
-								if isKeyword(words[i+1]) { // {X} {Y} <- reffering to X
+								if isKeyword(words[i+1]) { // {X} {Y} <- referring to X
 									k = key{left: "", word: keyword, right: "-", sample: sid, field: fid}
 								} else { // {} ...
 									k = key{left: "", word: keyword, right: words[i+1], sample: sid, field: fid}
@@ -150,15 +150,15 @@ func (m *model) learn() error {
 							}
 						} else {
 							if i == wl-1 { // ... {}
-								if isKeyword(words[i-1]) { // {X} {Y} <- reffering to Y
+								if isKeyword(words[i-1]) { // {X} {Y} <- referring to Y
 									k = key{left: "-", word: keyword, right: "", sample: sid, field: fid}
 								} else { // ... {}
 									k = key{left: words[i-1], word: keyword, right: "", sample: sid, field: fid}
 								}
 							} else { // ... {} ...
-								if isKeyword(words[i-1]) { // ... {X} {Y} ... <- reffering to Y
+								if isKeyword(words[i-1]) { // ... {X} {Y} ... <- referring to Y
 									k = key{left: "-", word: keyword, right: words[i+1], sample: sid, field: fid}
-								} else if isKeyword(words[i+1]) { // ... {X} {Y} ... <- reffering to X
+								} else if isKeyword(words[i+1]) { // ... {X} {Y} ... <- referring to X
 									k = key{left: words[i-1], word: keyword, right: "-", sample: sid, field: fid}
 								} else { // ... {} ...
 									k = key{left: words[i-1], word: keyword, right: words[i+1], sample: sid, field: fid}
@@ -169,7 +169,7 @@ func (m *model) learn() error {
 				}
 				m.keys[sid] = append(m.keys[sid], k)
 				if len(m.keys[sid]) == kl {
-					return fmt.Errorf("error while proccessing model samples, miss-spelled '%s'", keyword)
+					return fmt.Errorf("error while processing model samples, miss-spelled '%s'", keyword)
 				}
 			}
 		}
@@ -292,7 +292,7 @@ func NewClassifier(w ...io.Writer) *Classifier {
 	return &Classifier{output: os.Stdout}
 }
 
-// NewClass creates a clasification class
+// NewClass creates a classification class
 func (cls Classifier) NewClass(name string, samples []string) error {
 	if name == "" {
 		return fmt.Errorf("class name can't be empty")
@@ -304,7 +304,7 @@ func (cls Classifier) NewClass(name string, samples []string) error {
 	return nil
 }
 
-// Learn is the ml proccess for classification
+// Learn is the ml process for classification
 func (cls Classifier) Learn() error {
 	if len(cls.classes) > 0 {
 		stream := make(chan base.TextDatapoint, 100)
@@ -324,7 +324,7 @@ func (cls Classifier) Learn() error {
 		for {
 			err := <-errors
 			if err != nil {
-				return fmt.Errorf("error ocurred while learning: %s", err)
+				return fmt.Errorf("error occurred while learning: %s", err)
 			}
 			// training is done!
 			break
