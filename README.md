@@ -180,7 +180,7 @@ if song, ok := s.(Song); ok {
 ```
 
 ### TODO
-- [ ] Tests
+- [ ] Unit tests
 - [ ] Make code more readable
 - [ ] Add support for more types in the future (long term)
 - [ ] Maybe something else i'm forgetting

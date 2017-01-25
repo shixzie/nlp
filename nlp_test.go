@@ -27,7 +27,7 @@ func TestP(t *testing.T) {
 		panic(err)
 	}
 
-	err = nl.Learn() // you must call Learn after registrated all models and before calling P
+	err = nl.Learn() // you must call Learn after all models are registered and before calling P
 	if err != nil {
 		panic(err)
 	}
