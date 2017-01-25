@@ -8,21 +8,21 @@ import (
 )
 
 func TestP(t *testing.T) {
-	type Song struct {
-		Name   string
-		Artist string
+	type Order struct {
+		Product  string
+		Quantity int
 	}
 
-	songSamples := []string{
-		"play {Name} by {Artist}",
-		"play {Name} from {Artist}",
-		"play {Name}",
-		"from {Artist} play {Name}",
+	orderSamples := []string{
+		"dame {Quantity} , {Product}",
+		"ordena {Quantity} , {Product}",
+		"compra un {Product}",
+		"compra {Quantity} , {Product}",
 	}
 
 	nl := nlp.New()
 
-	err := nl.RegisterModel(Song{}, songSamples)
+	err := nl.RegisterModel(Order{}, orderSamples)
 	if err != nil {
 		panic(err)
 	}
@@ -31,15 +31,15 @@ func TestP(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	s := nl.P("hello sir can you pleeeeeease play King by Lauren Aquilina") // after learning you can call P the times you want
-	if song, ok := s.(Song); ok {
+	o := nl.P("compra 250 , cajas vacías") // after learning you can call P the times you want
+	if order, ok := o.(Order); ok {
 		fmt.Println("Success")
-		fmt.Printf("%#v\n", song)
+		fmt.Printf("%#v\n", order)
 	} else {
 		fmt.Println("Failed")
 	}
 	// Prints
 	//
 	// Success
-	// nlp_test.Song{Name: "King", Artist: "Lauren Aquilina"}
+	// nlp_test.Order{Product: "King", Quantity: 25}
 }
