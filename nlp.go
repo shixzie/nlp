@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"bytes"
+
 	"github.com/cdipaolo/goml/base"
 	"github.com/cdipaolo/goml/text"
 )
@@ -17,16 +19,13 @@ import (
 type NL struct {
 	models []*model
 	naive  *text.NaiveBayes
-	output io.Writer
+	// Output contains the training output for the
+	// NaiveBayes algorithm
+	Output *bytes.Buffer
 }
 
 // New returns a *NL
-func New(output ...io.Writer) *NL {
-	if output != nil && len(output) > 0 {
-		return &NL{output: output[0]}
-	}
-	return &NL{output: os.Stdout}
-}
+func New() *NL { return &NL{Output: bytes.NewBufferString("")} }
 
 // P proccesses the expr and returns one of
 // the types passed as the i parameter to the RegistryModel
@@ -52,7 +51,7 @@ func (nl *NL) Learn() error {
 			}
 		}
 		nl.naive = text.NewNaiveBayes(stream, uint8(len(nl.models)), base.OnlyWordsAndNumbers)
-		nl.naive.Output = nl.output
+		nl.naive.Output = nl.Output
 		go nl.naive.OnlineLearn(errors)
 		close(stream)
 		for {
@@ -73,14 +72,12 @@ type model struct {
 	fields  []field
 	keys    map[int][]key
 	samples []string
-	output  io.Writer
 }
 
 type field struct {
-	i int                 // index
-	n string              // name
-	f reflect.StructField // struct field
-	k reflect.Kind        // kind
+	i int          // index
+	n string       // name
+	k reflect.Kind // kind
 }
 
 type key struct {
@@ -105,7 +102,6 @@ func (nl *NL) RegisterModel(i interface{}, samples []string) error {
 		mod := &model{
 			tpy:     tpy,
 			samples: samples,
-			output:  nl.output,
 			keys:    make(map[int][]key),
 		}
 	NextField:
@@ -115,7 +111,7 @@ func (nl *NL) RegisterModel(i interface{}, samples []string) error {
 			}
 			switch val.Field(i).Kind() {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.String:
-				mod.fields = append(mod.fields, field{i, tpy.Field(i).Name, tpy.Field(i), val.Field(i).Kind()})
+				mod.fields = append(mod.fields, field{i, tpy.Field(i).Name, val.Field(i).Kind()})
 			}
 		}
 		nl.models = append(nl.models, mod)
@@ -178,67 +174,72 @@ func (m *model) learn() error {
 }
 
 func (m *model) selectBestSample(expr string) (int, map[string][]int) {
+	// map[sample_id]score
 	scores := make(map[int]int)
-	wmap := make(map[int]map[string][]int)
+	// map[sample_id]map[keyword]indices
+	wordsMap := make(map[int]map[string][]int)
+	// expr splitted by " " <- Space
 	words := strings.Split(expr, " ")
-	wl := len(words)
-	for sid, keys := range m.keys {
+	// lenght of the words (how many words we have in the expr)
+	wordsLen := len(words)
+	for sampleID, keys := range m.keys {
 		for _, key := range keys {
-			for i, word := range words {
-				if i == 0 { // {} ...
-					if i == wl-1 { // {}
-						scores[sid]++
+			for wordID, word := range words {
+				if wordID == 0 { // {} ...
+					if wordID == wordsLen-1 { // {}
+						scores[sampleID]++
 					} else { // {} ...
-						if words[i+1] == key.right { // {} x -> x == key.right
-							scores[sid]++
+						if words[wordID+1] == key.right { // {} x -> x == key.right
+							scores[sampleID]++
 							wi := strings.Index(expr, word)
-							if wmap[sid] == nil {
-								wmap[sid] = make(map[string][]int)
+							if wordsMap[sampleID] == nil {
+								wordsMap[sampleID] = make(map[string][]int)
 							}
-							wmap[sid][key.word] = append(wmap[sid][key.word], wi, wi+len(word))
+							wordsMap[sampleID][key.word] = append(wordsMap[sampleID][key.word], wi, wi+len(word))
 						}
 					}
 				} else { // ... {} ... || ... {}
-					if i == wl-1 { // ... {}
-						if words[i-1] == key.left {
-							scores[sid]++
+					if wordID == wordsLen-1 { // ... {}
+						if words[wordID-1] == key.left {
+							scores[sampleID]++
 							wi := strings.Index(expr, word)
-							if wmap[sid] == nil {
-								wmap[sid] = make(map[string][]int)
+							if wordsMap[sampleID] == nil {
+								wordsMap[sampleID] = make(map[string][]int)
 							}
-							wmap[sid][key.word] = append(wmap[sid][key.word], wi, len(expr))
+							wordsMap[sampleID][key.word] = append(wordsMap[sampleID][key.word], wi, len(expr))
 						}
 					} else { /// ... {} ...
-						if words[i-1] == key.left { // ... x {} ... -> x == key.left
-							scores[sid]++
+						if words[wordID-1] == key.left { // ... x {} ... -> x == key.left
+							scores[sampleID]++
 							wi := strings.Index(expr, word)
-							if wmap[sid] == nil {
-								wmap[sid] = make(map[string][]int)
+							if wordsMap[sampleID] == nil {
+								wordsMap[sampleID] = make(map[string][]int)
 							}
-							wmap[sid][key.word] = append(wmap[sid][key.word], wi)
+							wordsMap[sampleID][key.word] = append(wordsMap[sampleID][key.word], wi)
 
-							lw := len(wmap[sid][key.word])
-							for j := i; j < wl; j++ {
+							lw := len(wordsMap[sampleID][key.word])
+							for j := wordID; j < wordsLen; j++ {
 								if words[j] == key.right {
-									wmap[sid][key.word] = append(wmap[sid][key.word], strings.Index(expr, words[j])-1)
+									wordsMap[sampleID][key.word] = append(wordsMap[sampleID][key.word], strings.Index(expr, words[j])-1)
 								}
 							}
 							if reflect.New(m.tpy).Elem().Field(key.field).Kind() == reflect.String {
-								if lw == len(wmap[sid][key.word]) {
-									wmap[sid][key.word] = append(wmap[sid][key.word], len(expr))
+								if lw == len(wordsMap[sampleID][key.word]) {
+									wordsMap[sampleID][key.word] = append(wordsMap[sampleID][key.word], len(expr))
 								}
 							} else {
-								wmap[sid][key.word] = append(wmap[sid][key.word], wmap[sid][key.word][0]+len(word))
+								wordsMap[sampleID][key.word] = append(wordsMap[sampleID][key.word], wordsMap[sampleID][key.word][0]+len(word))
 							}
 						}
-						if words[i+1] == key.right { // ... {} x ... -> x == key.right
-							scores[sid]++
+						if words[wordID+1] == key.right { // ... {} x ... -> x == key.right
+							scores[sampleID]++
 						}
 					}
 				}
 			}
 		}
 	}
+	// select the sample with the highest score
 	bestScore := 0
 	bestSampleID := -1
 	for sid, score := range scores {
@@ -247,16 +248,15 @@ func (m *model) selectBestSample(expr string) (int, map[string][]int) {
 			bestSampleID = sid
 		}
 	}
-	// fmt.Fprintf(m.output, "%#v\n\n", wmap[bestSampleID])
-	return bestSampleID, wmap[bestSampleID]
+	return bestSampleID, wordsMap[bestSampleID]
 }
 
 func (m *model) fit(expr string) interface{} {
 	val := reflect.New(m.tpy).Elem()
-	sid, mapping := m.selectBestSample(expr)
-	if sid != -1 {
-		for _, key := range m.keys[sid] {
-			if indices, ok := mapping[key.word]; ok {
+	sampleID, keywords := m.selectBestSample(expr)
+	if sampleID != -1 {
+		for _, key := range m.keys[sampleID] {
+			if indices, ok := keywords[key.word]; ok {
 				switch val.Field(key.field).Kind() {
 				case reflect.String:
 					val.Field(key.field).SetString(string(expr[indices[0]:indices[1]]))
@@ -267,7 +267,6 @@ func (m *model) fit(expr string) interface{} {
 				}
 			}
 		}
-		// fmt.Fprintf(m.output, "Predicted sample %#v for %#v\n", m.samples[sid], expr)
 	}
 	return val.Interface()
 }
