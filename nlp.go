@@ -120,10 +120,30 @@ func (nl *NL) RegisterModel(i interface{}, samples []string) error {
 
 func (m *model) learn() error {
 	isKeyword := func(word string) bool {
-		return string(word[0]) == "{" && string(word[len(word)-1]) == "}"
+		if string(word[0]) == "{" && string(word[len(word)-1]) == "}" {
+			return true
+		}
+		if string(word[0]) == "{" && string(word[len(word)-2]) == "}" {
+			return true
+		}
+		return false
 	}
 	for sid, s := range m.samples {
-		words := strings.Split(s, " ")
+		badWords := strings.Split(s, " ")
+		punct := []string{",", ".", "!", "¡", "-", "_", ";", ":", "]", "[", "'"}
+		words := []string{}
+		for _, bw := range badWords {
+			lw := len(words)
+			for _, p := range punct {
+				if strings.HasSuffix(bw, p) {
+					words = append(words, string(bw[:len(bw)-1]))
+					words = append(words, string(bw[len(bw)-1]))
+				}
+			}
+			if lw == len(words) {
+				words = append(words, bw)
+			}
+		}
 		wl := len(words)
 		for i, word := range words {
 			if isKeyword(word) {
@@ -176,8 +196,23 @@ func (m *model) selectBestSample(expr string) (int, map[string][]int) {
 	scores := make(map[int]int)
 	// map[sample_id]map[keyword]indices
 	wordsMap := make(map[int]map[string][]int)
-	// expr splitted by " " <- Space
-	words := strings.Split(expr, " ")
+	// expr splitted by Space
+	badWords := strings.Split(expr, " ")
+	punct := []string{",", ".", "!", "¡", "-", "_", ";", ":", "]", "[", "'"}
+	words := []string{}
+	for _, bw := range badWords {
+		lw := len(words)
+		for _, p := range punct {
+			if strings.HasSuffix(bw, p) {
+				words = append(words, string(bw[:len(bw)-1]))
+				words = append(words, string(bw[len(bw)-1]))
+			}
+		}
+		if lw == len(words) {
+			words = append(words, bw)
+		}
+	}
+
 	// lenght of the words (how many words we have in the expr)
 	wordsLen := len(words)
 	for sampleID, keys := range m.keys {
@@ -193,6 +228,7 @@ func (m *model) selectBestSample(expr string) (int, map[string][]int) {
 							if wordsMap[sampleID] == nil {
 								wordsMap[sampleID] = make(map[string][]int)
 							}
+							fmt.Printf("enter hiar\n\n")
 							wordsMap[sampleID][key.word] = append(wordsMap[sampleID][key.word], wi, wi+len(word))
 						}
 					}
@@ -218,7 +254,7 @@ func (m *model) selectBestSample(expr string) (int, map[string][]int) {
 							lw := len(wordsMap[sampleID][key.word])
 							for j := wordID; j < wordsLen; j++ {
 								if words[j] == key.right {
-									wordsMap[sampleID][key.word] = append(wordsMap[sampleID][key.word], strings.Index(expr, words[j])-1)
+									wordsMap[sampleID][key.word] = append(wordsMap[sampleID][key.word], strings.Index(expr, words[j]))
 								}
 							}
 							if reflect.New(m.tpy).Elem().Field(key.field).Kind() == reflect.String {
@@ -291,7 +327,7 @@ func (cls *Classifier) NewClass(name string, samples []string) error {
 	if name == "" {
 		return fmt.Errorf("class name can't be empty")
 	}
-	if len(samples) == 0 || samples == nil {
+	if len(samples) == 0 {
 		return fmt.Errorf("samples can't be nil or empty")
 	}
 	cls.classes = append(cls.classes, &class{name: name, samples: samples})
