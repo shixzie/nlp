@@ -3,8 +3,6 @@ package nlp
 
 import (
 	"fmt"
-	"io"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -275,7 +273,9 @@ func (m *model) fit(expr string) interface{} {
 type Classifier struct {
 	naive   *text.NaiveBayes
 	classes []*class
-	output  io.Writer
+	// Output contains the training output for the
+	// NaiveBayes algorithm
+	Output *bytes.Buffer
 }
 
 type class struct {
@@ -284,15 +284,10 @@ type class struct {
 }
 
 // NewClassifier returns a new classifier
-func NewClassifier(w ...io.Writer) *Classifier {
-	if w != nil && len(w) > 0 {
-		return &Classifier{output: w[0]}
-	}
-	return &Classifier{output: os.Stdout}
-}
+func NewClassifier() *Classifier { return &Classifier{Output: bytes.NewBufferString("")} }
 
 // NewClass creates a classification class
-func (cls Classifier) NewClass(name string, samples []string) error {
+func (cls *Classifier) NewClass(name string, samples []string) error {
 	if name == "" {
 		return fmt.Errorf("class name can't be empty")
 	}
@@ -304,7 +299,7 @@ func (cls Classifier) NewClass(name string, samples []string) error {
 }
 
 // Learn is the ml process for classification
-func (cls Classifier) Learn() error {
+func (cls *Classifier) Learn() error {
 	if len(cls.classes) > 0 {
 		stream := make(chan base.TextDatapoint, 100)
 		errors := make(chan error)
@@ -317,7 +312,7 @@ func (cls Classifier) Learn() error {
 			}
 		}
 		cls.naive = text.NewNaiveBayes(stream, uint8(len(cls.classes)), base.OnlyWordsAndNumbers)
-		cls.naive.Output = cls.output
+		cls.naive.Output = cls.Output
 		go cls.naive.OnlineLearn(errors)
 		close(stream)
 		for {
@@ -335,4 +330,4 @@ func (cls Classifier) Learn() error {
 
 // Classify classifies expr and returns the class name
 // which expr belongs to
-func (cls Classifier) Classify(expr string) string { return cls.classes[cls.naive.Predict(expr)].name }
+func (cls *Classifier) Classify(expr string) string { return cls.classes[cls.naive.Predict(expr)].name }
