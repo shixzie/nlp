@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Shixzie/nlp/parser"
 	"github.com/cdipaolo/goml/base"
 	"github.com/cdipaolo/goml/text"
-	"github.com/shixzie/nlp/parser"
 )
 
 // NL is a Natural Language Processor
