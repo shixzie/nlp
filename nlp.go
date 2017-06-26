@@ -2,15 +2,16 @@
 package nlp
 
 import (
+	"bytes"
 	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
-
-	"bytes"
+	"time"
 
 	"github.com/cdipaolo/goml/base"
 	"github.com/cdipaolo/goml/text"
+	"github.com/shixzie/nlp/parser"
 )
 
 // NL is a Natural Language Processor
@@ -34,8 +35,11 @@ func (nl *NL) P(expr string) interface{} { return nl.models[nl.naive.Predict(exp
 // returns an error if something occurred while learning
 func (nl *NL) Learn() error {
 	if len(nl.models) > 0 {
-		stream := make(chan base.TextDatapoint, 100)
+		stream := make(chan base.TextDatapoint)
 		errors := make(chan error)
+		nl.naive = text.NewNaiveBayes(stream, uint8(len(nl.models)), base.OnlyWordsAndNumbers)
+		nl.naive.Output = nl.Output
+		go nl.naive.OnlineLearn(errors)
 		for i := range nl.models {
 			err := nl.models[i].learn()
 			if err != nil {
@@ -48,9 +52,6 @@ func (nl *NL) Learn() error {
 				}
 			}
 		}
-		nl.naive = text.NewNaiveBayes(stream, uint8(len(nl.models)), base.OnlyWordsAndNumbers)
-		nl.naive.Output = nl.Output
-		go nl.naive.OnlineLearn(errors)
 		close(stream)
 		for {
 			err := <-errors
@@ -66,21 +67,22 @@ func (nl *NL) Learn() error {
 }
 
 type model struct {
-	tpy     reflect.Type
-	fields  []field
-	keys    map[int][]key
-	samples []string
+	tpy      reflect.Type
+	fields   []field
+	expected [][]expected
+	samples  []string
+}
+
+type expected struct {
+	limit bool
+	value string
+	field field
 }
 
 type field struct {
-	i int          // index
-	n string       // name
-	k reflect.Kind // kind
-}
-
-type key struct {
-	left, word, right string
-	sample, field     int
+	index int
+	name  string
+	kind  interface{}
 }
 
 // RegisterModel registers a model i and creates possible patterns
@@ -92,23 +94,27 @@ func (nl *NL) RegisterModel(i interface{}, samples []string) error {
 	if i == nil {
 		return fmt.Errorf("can't create model from nil value")
 	}
-	if len(samples) == 0 || samples == nil {
+	if len(samples) == 0 {
 		return fmt.Errorf("samples can't be nil or empty")
 	}
 	tpy, val := reflect.TypeOf(i), reflect.ValueOf(i)
 	if tpy.Kind() == reflect.Struct {
 		mod := &model{
-			tpy:     tpy,
-			samples: samples,
-			keys:    make(map[int][]key),
+			tpy:      tpy,
+			samples:  samples,
+			expected: make([][]expected, len(samples)),
 		}
 	NextField:
 		for i := 0; i < tpy.NumField(); i++ {
 			if tpy.Field(i).Anonymous || tpy.Field(i).PkgPath != "" {
 				continue NextField
 			}
+			if v, ok := val.Field(i).Interface().(time.Time); ok {
+				mod.fields = append(mod.fields, field{i, tpy.Field(i).Name, v})
+				continue NextField
+			}
 			switch val.Field(i).Kind() {
-			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.String:
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Float32, reflect.Float64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.String:
 				mod.fields = append(mod.fields, field{i, tpy.Field(i).Name, val.Field(i).Kind()})
 			}
 		}
@@ -119,251 +125,159 @@ func (nl *NL) RegisterModel(i interface{}, samples []string) error {
 }
 
 func (m *model) learn() error {
-	isKeyword := func(word string) bool {
-		if string(word[0]) == "{" && string(word[len(word)-1]) == "}" {
-			return true
-		}
-		if string(word[0]) == "{" && string(word[len(word)-2]) == "}" {
-			return true
-		}
-		return false
-	}
 	for sid, s := range m.samples {
-		badWords := strings.Split(s, " ")
-		punct := []string{",", ".", "!", "¡", "-", "_", ";", ":", "]", "[", "'"}
-		words := []string{}
-		for _, bw := range badWords {
-			lw := len(words)
-			for _, p := range punct {
-				if strings.HasSuffix(bw, p) {
-					words = append(words, string(bw[:len(bw)-1]))
-					words = append(words, string(bw[len(bw)-1]))
-				}
-			}
-			if lw == len(words) {
-				words = append(words, bw)
-			}
+		tokens, err := parser.ParseSample(sid, s)
+		if err != nil {
+			return err
 		}
-		wl := len(words)
-		for i, word := range words {
-			if isKeyword(word) {
-				keyword := word[1 : len(word)-1]
-				k := key{}
-				kl := len(m.keys[sid])
-				for fid, f := range m.fields {
-					if f.n == keyword {
-						if i == 0 { // {} <- first
-							if i == wl-1 { // {}
-								k = key{left: "", word: keyword, right: "", sample: sid, field: fid}
-							} else { // {} ...
-								if isKeyword(words[i+1]) { // {X} {Y} <- referring to X
-									k = key{left: "", word: keyword, right: "-", sample: sid, field: fid}
-								} else { // {} ...
-									k = key{left: "", word: keyword, right: words[i+1], sample: sid, field: fid}
-								}
-							}
-						} else {
-							if i == wl-1 { // ... {}
-								if isKeyword(words[i-1]) { // {X} {Y} <- referring to Y
-									k = key{left: "-", word: keyword, right: "", sample: sid, field: fid}
-								} else { // ... {}
-									k = key{left: words[i-1], word: keyword, right: "", sample: sid, field: fid}
-								}
-							} else { // ... {} ...
-								if isKeyword(words[i-1]) { // ... {X} {Y} ... <- referring to Y
-									k = key{left: "-", word: keyword, right: words[i+1], sample: sid, field: fid}
-								} else if isKeyword(words[i+1]) { // ... {X} {Y} ... <- referring to X
-									k = key{left: words[i-1], word: keyword, right: "-", sample: sid, field: fid}
-								} else { // ... {} ...
-									k = key{left: words[i-1], word: keyword, right: words[i+1], sample: sid, field: fid}
-								}
-							}
-						}
+		var exps []expected
+		var hasAtLeastOneKey bool
+		for _, tk := range tokens {
+			if tk.Kw {
+				hasAtLeastOneKey = true
+				mistypedField := true
+				for _, f := range m.fields {
+					if tk.Val == f.name {
+						mistypedField = false
+						exps = append(exps, expected{field: f, value: tk.Val})
 					}
 				}
-				m.keys[sid] = append(m.keys[sid], k)
-				if len(m.keys[sid]) == kl {
-					return fmt.Errorf("error while processing model samples, miss-spelled '%s'", keyword)
+				if mistypedField {
+					return fmt.Errorf("sample#%d: mistyped field %q", sid, tk.Val)
 				}
+			} else {
+				exps = append(exps, expected{limit: true, value: tk.Val})
 			}
+		}
+		m.expected[sid] = exps
+		if !hasAtLeastOneKey {
+			return fmt.Errorf("sample#%d: need at least one keyword", sid)
 		}
 	}
 	return nil
 }
 
-func (m *model) selectBestSample(expr string) (int, map[string][]int) {
-	// map[sample_id]score
-	scores := make(map[int]int)
-	// map[sample_id]map[keyword]indices
-	wordsMap := make(map[int]map[string][]int)
-	// expr splitted by Space
-	badWords := strings.Split(expr, " ")
-	punct := []string{",", ".", "!", "¡", "-", "_", ";", ":", "]", "[", "'"}
-	words := []string{}
-	for _, bw := range badWords {
-		lw := len(words)
-		for _, p := range punct {
-			if strings.HasSuffix(bw, p) {
-				words = append(words, string(bw[:len(bw)-1]))
-				words = append(words, string(bw[len(bw)-1]))
-			}
-		}
-		if lw == len(words) {
-			words = append(words, bw)
-		}
+func (m *model) selectBestSample(expr string) []expected {
+	// slice [sample_id]score
+	scores := make([]int, len(m.samples))
+
+	tokens, err := parser.ParseSample(0, expr)
+	if err != nil {
+		return nil
 	}
 
-	// lenght of the words (how many words we have in the expr)
-	wordsLen := len(words)
-	for sampleID, keys := range m.keys {
-		for _, key := range keys {
-			for wordID, word := range words {
-				if wordID == 0 { // {} ...
-					if wordID == wordsLen-1 { // {}
-						scores[sampleID]++
-					} else { // {} ...
-						if words[wordID+1] == key.right { // {} x -> x == key.right
-							scores[sampleID]++
-							wi := strings.Index(expr, word)
-							if wordsMap[sampleID] == nil {
-								wordsMap[sampleID] = make(map[string][]int)
-							}
-							fmt.Printf("enter hiar\n\n")
-							wordsMap[sampleID][key.word] = append(wordsMap[sampleID][key.word], wi, wi+len(word))
-						}
-					}
-				} else { // ... {} ... || ... {}
-					if wordID == wordsLen-1 { // ... {}
-						if words[wordID-1] == key.left {
-							scores[sampleID]++
-							wi := strings.Index(expr, word)
-							if wordsMap[sampleID] == nil {
-								wordsMap[sampleID] = make(map[string][]int)
-							}
-							wordsMap[sampleID][key.word] = append(wordsMap[sampleID][key.word], wi, len(expr))
-						}
-					} else { /// ... {} ...
-						if words[wordID-1] == key.left { // ... x {} ... -> x == key.left
-							scores[sampleID]++
-							wi := strings.Index(expr, word)
-							if wordsMap[sampleID] == nil {
-								wordsMap[sampleID] = make(map[string][]int)
-							}
-							wordsMap[sampleID][key.word] = append(wordsMap[sampleID][key.word], wi)
+	// fmt.Printf("tokens: %v\n", tokens)
 
-							lw := len(wordsMap[sampleID][key.word])
-							for j := wordID; j < wordsLen; j++ {
-								if words[j] == key.right {
-									wordsMap[sampleID][key.word] = append(wordsMap[sampleID][key.word], strings.Index(expr, words[j]))
-								}
-							}
-							if reflect.New(m.tpy).Elem().Field(key.field).Kind() == reflect.String {
-								if lw == len(wordsMap[sampleID][key.word]) {
-									wordsMap[sampleID][key.word] = append(wordsMap[sampleID][key.word], len(expr))
-								}
-							} else {
-								wordsMap[sampleID][key.word] = append(wordsMap[sampleID][key.word], wordsMap[sampleID][key.word][0]+len(word))
-							}
-						}
-						if words[wordID+1] == key.right { // ... {} x ... -> x == key.right
-							scores[sampleID]++
-						}
+	mapping := make([][]expected, len(m.samples))
+	limitsOrder := make([][]string, len(m.samples)+1)
+
+	for sid, exps := range m.expected {
+		var currentVal []string
+		var reading bool
+		var lastToken int
+		isLimit := func(s string) bool {
+			for _, e := range exps {
+				if e.value == s {
+					return true
+				}
+			}
+			return false
+		}
+	expecteds:
+		for _, e := range exps {
+			// fmt.Printf("expecting: %v - limit: %v\n", e.value, e.limit)
+			if e.limit {
+				reading = false
+				limitsOrder[sid+1] = append(limitsOrder[sid+1], e.value)
+			} else {
+				reading = true
+			}
+			// fmt.Printf("reading: %v\n", reading)
+			for i := lastToken; i < len(tokens); i++ {
+				t := tokens[i]
+				// fmt.Printf("token: %v - isLimit: %v\n", t.Val, isLimit(t.Val))
+				if isLimit(t.Val) {
+					if sid == 0 {
+						limitsOrder[0] = append(limitsOrder[0], t.Val)
+					}
+					scores[sid] = scores[sid] + 1
+					if len(currentVal) > 0 {
+						// fmt.Printf("appending: %v {%v}\n", strings.Join(currentVal, " "), e.field.n)
+						mapping[sid] = append(mapping[sid], expected{field: e.field, value: strings.Join(currentVal, " ")})
+						currentVal = currentVal[:0]
+						lastToken = i
+						continue expecteds
+					}
+					lastToken = i + 1
+					continue expecteds
+				} else {
+					if reading {
+						// fmt.Printf("adding: %v\n", t.Val)
+						currentVal = append(currentVal, t.Val)
 					}
 				}
 			}
+			if len(currentVal) > 0 {
+				// fmt.Printf("appending: %v {%v}\n", strings.Join(currentVal, " "), e.field.n)
+				mapping[sid] = append(mapping[sid], expected{field: e.field, value: strings.Join(currentVal, " ")})
+			}
 		}
+		// fmt.Printf("\n\n")
 	}
-	// select the sample with the highest score
-	bestScore := 0
-	bestSampleID := -1
-	for sid, score := range scores {
+order:
+	for i := 1; i < len(limitsOrder); i++ {
+		if len(limitsOrder[0]) < len(limitsOrder[i]) {
+			continue order
+		}
+		for j := range limitsOrder[i] {
+			if limitsOrder[i][j] != limitsOrder[0][j] {
+				continue order
+			}
+		}
+		scores[i-1] = scores[i-1] + 1
+	}
+
+	// fmt.Printf("orders: %v\n\n", limitsOrder)
+
+	// fmt.Printf("scores: %v\n", scores)
+
+	bestScore, bestMapping := -1, -1
+	for id, score := range scores {
 		if score > bestScore {
 			bestScore = score
-			bestSampleID = sid
+			bestMapping = id
 		}
 	}
-	return bestSampleID, wordsMap[bestSampleID]
+	if bestScore == -1 {
+		return nil
+	}
+	return mapping[bestMapping]
 }
 
 func (m *model) fit(expr string) interface{} {
-	val := reflect.New(m.tpy).Elem()
-	sampleID, keywords := m.selectBestSample(expr)
-	if sampleID != -1 {
-		for _, key := range m.keys[sampleID] {
-			if indices, ok := keywords[key.word]; ok {
-				switch val.Field(key.field).Kind() {
+	val := reflect.New(m.tpy)
+	exps := m.selectBestSample(expr)
+	if len(exps) > 0 {
+		for _, e := range exps {
+			switch t := e.field.kind.(type) {
+			case reflect.Kind:
+				switch t {
 				case reflect.String:
-					val.Field(key.field).SetString(string(expr[indices[0]:indices[1]]))
+					val.Elem().Field(e.field.index).SetString(e.value)
+				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+					v, _ := strconv.ParseUint(e.value, 10, 0)
+					val.Elem().Field(e.field.index).SetUint(v)
+				case reflect.Float32, reflect.Float64:
+					v, _ := strconv.ParseFloat(e.value, 64)
+					val.Elem().Field(e.field.index).SetFloat(v)
 				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-					s := string(expr[indices[0]:indices[1]])
-					v, _ := strconv.ParseInt(s, 10, 0)
-					val.Field(key.field).SetInt(v)
+					v, _ := strconv.ParseInt(e.value, 10, 0)
+					val.Elem().Field(e.field.index).SetInt(v)
 				}
+			case time.Time:
+				// TODO: implement
 			}
 		}
 	}
 	return val.Interface()
 }
-
-// Classifier is a text classifier
-type Classifier struct {
-	naive   *text.NaiveBayes
-	classes []*class
-	// Output contains the training output for the
-	// NaiveBayes algorithm
-	Output *bytes.Buffer
-}
-
-type class struct {
-	name    string
-	samples []string
-}
-
-// NewClassifier returns a new classifier
-func NewClassifier() *Classifier { return &Classifier{Output: bytes.NewBufferString("")} }
-
-// NewClass creates a classification class
-func (cls *Classifier) NewClass(name string, samples []string) error {
-	if name == "" {
-		return fmt.Errorf("class name can't be empty")
-	}
-	if len(samples) == 0 {
-		return fmt.Errorf("samples can't be nil or empty")
-	}
-	cls.classes = append(cls.classes, &class{name: name, samples: samples})
-	return nil
-}
-
-// Learn is the ml process for classification
-func (cls *Classifier) Learn() error {
-	if len(cls.classes) > 0 {
-		stream := make(chan base.TextDatapoint, 100)
-		errors := make(chan error)
-		for i := range cls.classes {
-			for _, s := range cls.classes[i].samples {
-				stream <- base.TextDatapoint{
-					X: s,
-					Y: uint8(i),
-				}
-			}
-		}
-		cls.naive = text.NewNaiveBayes(stream, uint8(len(cls.classes)), base.OnlyWordsAndNumbers)
-		cls.naive.Output = cls.Output
-		go cls.naive.OnlineLearn(errors)
-		close(stream)
-		for {
-			err := <-errors
-			if err != nil {
-				return fmt.Errorf("error occurred while learning: %s", err)
-			}
-			// training is done!
-			break
-		}
-		return nil
-	}
-	return fmt.Errorf("register at least one class before learning")
-}
-
-// Classify classifies expr and returns the class name
-// which expr belongs to
-func (cls *Classifier) Classify(expr string) string { return cls.classes[cls.naive.Predict(expr)].name }

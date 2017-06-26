@@ -6,7 +6,9 @@
 
 ## Supported types
 ```go
-int
+int  int8  int16  int32  int64
+uint uint8 uint16 uint32 uint64
+float32 float64
 string
 ```
 
@@ -104,6 +106,8 @@ those texts.
 P first asks the trained algorithm which model should be used, once we get
 the right *and already trained* model, we just make it fit the expression.
 
+**Note that everything in the expression must be separated by a _space_ or _tab_**
+
 When processing an expression, nlp searches for the *limits* inside that 
 expression and evaluates which sample fits better the expression, it doesn't
 matter if the text has `trash`. In this example:
@@ -134,9 +138,9 @@ hello sir can you pleeeeeease play King by  Lauren Aquilina
 `{Name}` would be replaced with `King`, 
 `{Artist}` would be replaced with `Lauren Aquilina`, 
 `trash` would be ignored as well as the *limits* `play` and `by`, 
-and then a filled struct with the type used to register the model (`Song`) 
+and then **a pointer to a filled struct with the type used to register the model** (`Song`) 
 ( `Song.Name` being `{Name}` and `Song.Artist` beign `{Artist}` ) 
-will be returned.
+**will be returned**.
 
 ## Usage
 
@@ -166,7 +170,7 @@ if err != nil {
 
 // after learning you can call P the times you want
 s := nl.P("hello sir can you pleeeeeease play King by Lauren Aquilina") 
-if song, ok := s.(Song); ok {
+if song, ok := s.(*Song); ok {
 	fmt.Println("Success")
 	fmt.Printf("%#v\n", song)
 } else {
@@ -176,14 +180,8 @@ if song, ok := s.(Song); ok {
 // Prints
 //
 // Success
-// main.Song{Name: "King", Artist: "Lauren Aquilina"}
+// &main.Song{Name: "King", Artist: "Lauren Aquilina"}
 ```
-
-### TODO
-- [ ] Unit tests
-- [ ] Make code more readable
-- [ ] Add support for more types in the future (long term)
-- [ ] Maybe something else i'm forgetting
 
 ### LICENSE
 
