@@ -16,6 +16,7 @@ func TestNL_P(t *testing.T) {
 		Uint   uint
 		Float  float32
 		Time   time.Time
+		Dur    time.Duration
 	}
 
 	tSamples := []string{
@@ -24,6 +25,7 @@ func TestNL_P(t *testing.T) {
 		"uint {Uint}",
 		"float {Float}",
 		"time {Time}",
+		"dur {Dur}",
 		"string {String} int {Int}",
 		"string {String} time {Time}",
 	}
@@ -41,6 +43,11 @@ func TestNL_P(t *testing.T) {
 	}
 
 	tim, err := time.ParseInLocation("01-02-2006_3:04pm", "05-18-1999_6:42pm", time.Local)
+	if err != nil {
+		t.Error(err)
+	}
+
+	dur, err := time.ParseDuration("4h2m")
 	if err != nil {
 		t.Error(err)
 	}
@@ -68,6 +75,17 @@ func TestNL_P(t *testing.T) {
 		{
 			"time 05-18-1999_6:42pm",
 			tim,
+		},
+		{
+			"dur 4h2m",
+			dur,
+		},
+		{
+			"string Lmao int 42",
+			&T{
+				String: "Lmao",
+				Int:    42,
+			},
 		},
 		{
 			"string What's Up Boy time 05-18-1999_6:42pm",
@@ -100,6 +118,10 @@ func TestNL_P(t *testing.T) {
 			case time.Time:
 				if !c.Time.Equal(v) {
 					t.Errorf("test#%d: got %v want %v", i, c.Time, v)
+				}
+			case time.Duration:
+				if c.Dur != v {
+					t.Errorf("test#%d: got %v want %v", i, c.Dur, v)
 				}
 			case *T:
 				if !reflect.DeepEqual(c, v) {

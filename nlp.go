@@ -141,6 +141,9 @@ func (nl *NL) RegisterModel(i interface{}, samples []string, ops ...ModelOption)
 			if v, ok := val.Field(i).Interface().(time.Time); ok {
 				mod.fields = append(mod.fields, field{i, tpy.Field(i).Name, v})
 				continue NextField
+			} else if v, ok := val.Field(i).Interface().(time.Duration); ok {
+				mod.fields = append(mod.fields, field{i, tpy.Field(i).Name, v})
+				continue NextField
 			}
 			switch val.Field(i).Kind() {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Float32, reflect.Float64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.String:
@@ -304,6 +307,9 @@ func (m *model) fit(expr string) interface{} {
 				}
 			case time.Time:
 				v, _ := time.ParseInLocation(m.timeFormat, e.value, m.timeLocation)
+				val.Elem().Field(e.field.index).Set(reflect.ValueOf(v))
+			case time.Duration:
+				v, _ := time.ParseDuration(e.value)
 				val.Elem().Field(e.field.index).Set(reflect.ValueOf(v))
 			}
 		}
