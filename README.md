@@ -1,4 +1,6 @@
-[![GoDoc](https://godoc.org/github.com/Shixzie/nlp?status.svg)](https://godoc.org/github.com/Shixzie/nlp) [![Go Report Card](https://goreportcard.com/badge/github.com/Shixzie/nlp)](https://goreportcard.com/report/github.com/Shixzie/nlp)
+[![GoDoc](https://godoc.org/github.com/Shixzie/nlp?status.svg)](https://godoc.org/github.com/Shixzie/nlp) 
+[![Go Report Card](https://goreportcard.com/badge/github.com/Shixzie/nlp)](https://goreportcard.com/report/github.com/Shixzie/nlp)
+[![Build Status](https://travis-ci.org/Shixzie/nlp.svg?branch=master)](https://travis-ci.org/Shixzie/nlp)
 
 # nlp
 
@@ -16,6 +18,9 @@ string
 ```
 go get github.com/Shixzie/nlp
 ```
+
+**Go 1.7 or above is required**
+
 
 **Feel free to create PR's and open Issues :)**
 
