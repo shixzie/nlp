@@ -1,6 +1,8 @@
 [![GoDoc](https://godoc.org/github.com/Shixzie/nlp?status.svg)](https://godoc.org/github.com/Shixzie/nlp) 
 [![Go Report Card](https://goreportcard.com/badge/github.com/Shixzie/nlp)](https://goreportcard.com/report/github.com/Shixzie/nlp)
 [![Build Status](https://travis-ci.org/Shixzie/nlp.svg?branch=master)](https://travis-ci.org/Shixzie/nlp)
+[![codecov](https://codecov.io/gh/Shixzie/nlp/branch/master/graph/badge.svg)](https://codecov.io/gh/Shixzie/nlp)
+
 
 # nlp
 
