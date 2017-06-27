@@ -32,24 +32,25 @@ go get github.com/Shixzie/nlp
 You will always begin by creating a NL type calling nlp.New(), the NL type is a 
 Natural Language Processor that owns 3 funcs, RegisterModel(), Learn() and P().
 
-### RegisterModel(i interface{}, samples []string) error
+### RegisterModel(i interface{}, samples []string, ops ...ModelOption) error
 
-RegisterModel takes 2 parameters, an empty struct and a set of samples.
+RegisterModel takes 3 parameters, an empty struct, a set of samples and some options for the model.
 
 The empty struct lets nlp know all possible values inside the text, for example:
 ```go
 type Song struct {
-    Name   string // fields must be exported
-    Artist string
+    Name        string // fields must be exported
+    Artist      string
+    ReleasedAt  time.Time
 }
-err := nl.RegisterModel(Song{}, someSamples)
+err := nl.RegisterModel(Song{}, someSamples, nlp.WithTimeFormat("2006"))
 if err != nil {
 	panic(err)
 }
 // ...
 ```
 
-tells nlp that inside the text may be a Song.Name and a Song.Artist.
+tells nlp that inside the text may be a Song.Name, a Song.Artist and a Song.ReleasedAt.
 
 The samples are the key part about nlp, not just because they set the *limits*
 between *keywords* but also because they will be used to choose which model 
@@ -62,6 +63,7 @@ songSamples := []string{
 	"play {Name} from {Artist}",
 	"play {Name}",
 	"from {Artist} play {Name}",
+    "play something from {ReleasedAt}",
 }
 ```
 
@@ -154,8 +156,9 @@ and then **a pointer to a filled struct with the type used to register the model
 
 ```go
 type Song struct {
-	Name   string
-	Artist string
+	Name       string
+	Artist     string
+    ReleasedAt time.Time
 }
 
 songSamples := []string{
@@ -163,10 +166,11 @@ songSamples := []string{
 	"play {Name} from {Artist}",
 	"play {Name}",
 	"from {Artist} play {Name}",
+    "play something from {ReleasedAt}",
 }
 
 nl := nlp.New()
-err := nl.RegisterModel(Song{}, songSamples)
+err := nl.RegisterModel(Song{}, songSamples, nlp.WithTimeFormat("2006"))
 if err != nil {
 	panic(err)
 }

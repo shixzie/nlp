@@ -91,14 +91,15 @@ type field struct {
 type ModelOption func(*model)
 
 // WithTimeFormat sets the format used in time.Parse(format, val),
-// note that format can't contain any spaces
+// note that format can't contain any spaces, the default is 01-02-2006_3:04pm
 func WithTimeFormat(format string) ModelOption {
 	return func(m *model) {
 		m.timeFormat = strings.Replace(format, " ", "", -1)
 	}
 }
 
-// WithTimeLocation sets the location used in time.ParseInLocation(format, value, loc)
+// WithTimeLocation sets the location used in time.ParseInLocation(format, value, loc),
+// the default is time.Local
 func WithTimeLocation(loc *time.Location) ModelOption {
 	return func(m *model) {
 		if loc != nil {
@@ -108,7 +109,8 @@ func WithTimeLocation(loc *time.Location) ModelOption {
 }
 
 // RegisterModel registers a model i and creates possible patterns
-// from samples.
+// from samples, the default layout when parsing time is 01-02-2006_3:04pm
+// and the default location is time.Local.
 // Samples must have special formatting:
 //
 //	"play {Name} by {Artist}"
@@ -265,7 +267,6 @@ order:
 	}
 
 	// fmt.Printf("orders: %v\n\n", limitsOrder)
-
 	// fmt.Printf("scores: %v\n", scores)
 
 	bestScore, bestMapping := -1, -1
