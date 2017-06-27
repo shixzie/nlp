@@ -10,41 +10,106 @@ import (
 )
 
 func TestNL_P(t *testing.T) {
-	type Order struct {
-		Product  string
-		Quantity int
+	type T struct {
+		String string
+		Int    int
+		Uint   uint
+		Float  float32
+		Time   time.Time
 	}
 
-	orderSamples := []string{
-		"dame {Quantity}, {Product}",
-		"ordena {Quantity}, {Product}",
-		"compra un {Product}",
-		"compra {Quantity}, {Product}",
+	tSamples := []string{
+		"string {String}",
+		"int {Int}",
+		"uint {Uint}",
+		"float {Float}",
+		"time {Time}",
+		"string {String} int {Int}",
+		"string {String} time {Time}",
 	}
 
 	nl := New()
 
-	err := nl.RegisterModel(Order{}, orderSamples)
+	err := nl.RegisterModel(T{}, tSamples)
 	if err != nil {
-		panic(err)
+		t.Error(err)
 	}
 
-	err = nl.Learn() // you must call Learn after all models are registered and before calling P
+	err = nl.Learn()
 	if err != nil {
-		panic(err)
+		t.Error(err)
 	}
-	o := nl.P("compra 250 , cajas vacías") // after learning you can call P the times you want
-	if order, ok := o.(*Order); ok {
-		if order.Product != "cajas vacías" || order.Quantity != 250 {
-			t.Error("wrong values")
+
+	tim, err := time.ParseInLocation("01-02-2006_3:04pm", "05-18-1999_6:42pm", time.Local)
+	if err != nil {
+		t.Error(err)
+	}
+
+	cases := []struct {
+		expression string
+		want       interface{}
+	}{
+		{
+			"string Hello World",
+			"Hello World",
+		},
+		{
+			"int 42",
+			int(42),
+		},
+		{
+			"uint 43",
+			uint(43),
+		},
+		{
+			"float 44",
+			float32(44),
+		},
+		{
+			"time 05-18-1999_6:42pm",
+			tim,
+		},
+		{
+			"string What's Up Boy time 05-18-1999_6:42pm",
+			&T{
+				String: "What's Up Boy",
+				Time:   tim,
+			},
+		},
+	}
+	for i, test := range cases {
+		res := nl.P(test.expression)
+		if c, ok := res.(*T); ok {
+			switch v := test.want.(type) {
+			case string:
+				if c.String != v {
+					t.Errorf("test#%d: got %v want %v", i, c.String, v)
+				}
+			case int:
+				if c.Int != v {
+					t.Errorf("test#%d: got %v want %v", i, c.Int, v)
+				}
+			case uint:
+				if c.Uint != v {
+					t.Errorf("test#%d: got %v want %v", i, c.Uint, v)
+				}
+			case float32:
+				if c.Float != v {
+					t.Errorf("test#%d: got %v want %v", i, c.Float, v)
+				}
+			case time.Time:
+				if !c.Time.Equal(v) {
+					t.Errorf("test#%d: got %v want %v", i, c.Time, v)
+				}
+			case *T:
+				if !reflect.DeepEqual(c, v) {
+					t.Errorf("test#%d: got %v want %v", i, c, v)
+				}
+			}
+		} else {
+			t.Errorf("test#%d: got %T want %T", i, res, &T{})
 		}
-	} else {
-		t.Error("not an order")
 	}
-	// Prints
-	//
-	// Success
-	// &nlp_test.Order{Product: "cajas vacías", Quantity: 250}
 }
 
 func TestNL_RegisterModel(t *testing.T) {
@@ -56,6 +121,7 @@ func TestNL_RegisterModel(t *testing.T) {
 	type args struct {
 		i       interface{}
 		samples []string
+		ops     []ModelOption
 	}
 	type T struct {
 		unexported int
@@ -70,25 +136,34 @@ func TestNL_RegisterModel(t *testing.T) {
 		{
 			"nil struct",
 			fields{},
-			args{nil, nil},
+			args{nil, nil, nil},
 			true,
 		},
 		{
 			"nil samples",
 			fields{},
-			args{args{}, nil},
+			args{args{}, nil, nil},
 			true,
 		},
 		{
 			"non-struct",
 			fields{},
-			args{[]int{}, []string{""}},
+			args{[]int{}, []string{""}, nil},
 			true,
 		},
 		{
 			"unexported & time.Time",
 			fields{},
-			args{T{}, []string{""}},
+			args{T{}, []string{""}, nil},
+			false,
+		},
+		{
+			"options",
+			fields{},
+			args{T{}, []string{""}, []ModelOption{
+				WithTimeFormat("02-01-2006"),
+				WithTimeLocation(time.Local),
+			}},
 			false,
 		},
 	}
@@ -99,7 +174,7 @@ func TestNL_RegisterModel(t *testing.T) {
 				naive:  tt.fields.naive,
 				Output: tt.fields.Output,
 			}
-			if err := nl.RegisterModel(tt.args.i, tt.args.samples); (err != nil) != tt.wantErr {
+			if err := nl.RegisterModel(tt.args.i, tt.args.samples, tt.args.ops...); (err != nil) != tt.wantErr {
 				t.Errorf("NL.RegisterModel() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -111,6 +186,9 @@ func TestNL_Learn(t *testing.T) {
 		models []*model
 		naive  *text.NaiveBayes
 		Output *bytes.Buffer
+	}
+	type T struct {
+		Name string
 	}
 	tests := []struct {
 		name    string
@@ -128,6 +206,30 @@ func TestNL_Learn(t *testing.T) {
 				models: []*model{
 					&model{
 						samples: []string{""},
+					},
+				},
+				Output: bytes.NewBufferString(""),
+			},
+			true,
+		},
+		{
+			"mistyped field",
+			fields{
+				models: []*model{
+					&model{
+						samples: []string{"Hello {Namee}"},
+					},
+				},
+				Output: bytes.NewBufferString(""),
+			},
+			true,
+		},
+		{
+			"sample with no keys",
+			fields{
+				models: []*model{
+					&model{
+						samples: []string{"Hello"},
 					},
 				},
 				Output: bytes.NewBufferString(""),

@@ -67,10 +67,12 @@ func (nl *NL) Learn() error {
 }
 
 type model struct {
-	tpy      reflect.Type
-	fields   []field
-	expected [][]expected
-	samples  []string
+	tpy          reflect.Type
+	fields       []field
+	expected     [][]expected
+	samples      []string
+	timeFormat   string
+	timeLocation *time.Location
 }
 
 type expected struct {
@@ -85,12 +87,32 @@ type field struct {
 	kind  interface{}
 }
 
+// ModelOption is an option for a specific model
+type ModelOption func(*model)
+
+// WithTimeFormat sets the format used in time.Parse(format, val),
+// note that format can't contain any spaces
+func WithTimeFormat(format string) ModelOption {
+	return func(m *model) {
+		m.timeFormat = strings.Replace(format, " ", "", -1)
+	}
+}
+
+// WithTimeLocation sets the location used in time.ParseInLocation(format, value, loc)
+func WithTimeLocation(loc *time.Location) ModelOption {
+	return func(m *model) {
+		if loc != nil {
+			m.timeLocation = loc
+		}
+	}
+}
+
 // RegisterModel registers a model i and creates possible patterns
 // from samples.
+// Samples must have special formatting:
 //
-// NOTE: samples must have a special formatting, see example below.
-//
-func (nl *NL) RegisterModel(i interface{}, samples []string) error {
+//	"play {Name} by {Artist}"
+func (nl *NL) RegisterModel(i interface{}, samples []string, ops ...ModelOption) error {
 	if i == nil {
 		return fmt.Errorf("can't create model from nil value")
 	}
@@ -100,9 +122,14 @@ func (nl *NL) RegisterModel(i interface{}, samples []string) error {
 	tpy, val := reflect.TypeOf(i), reflect.ValueOf(i)
 	if tpy.Kind() == reflect.Struct {
 		mod := &model{
-			tpy:      tpy,
-			samples:  samples,
-			expected: make([][]expected, len(samples)),
+			tpy:          tpy,
+			samples:      samples,
+			expected:     make([][]expected, len(samples)),
+			timeFormat:   "01-02-2006_3:04pm",
+			timeLocation: time.Local,
+		}
+		for _, op := range ops {
+			op(mod)
 		}
 	NextField:
 		for i := 0; i < tpy.NumField(); i++ {
@@ -149,10 +176,10 @@ func (m *model) learn() error {
 				exps = append(exps, expected{limit: true, value: tk.Val})
 			}
 		}
-		m.expected[sid] = exps
 		if !hasAtLeastOneKey {
 			return fmt.Errorf("sample#%d: need at least one keyword", sid)
 		}
+		m.expected[sid] = exps
 	}
 	return nil
 }
@@ -275,7 +302,8 @@ func (m *model) fit(expr string) interface{} {
 					val.Elem().Field(e.field.index).SetInt(v)
 				}
 			case time.Time:
-				// TODO: implement
+				v, _ := time.ParseInLocation(m.timeFormat, e.value, m.timeLocation)
+				val.Elem().Field(e.field.index).Set(reflect.ValueOf(v))
 			}
 		}
 	}
