@@ -277,7 +277,7 @@ func Test_model_learn(t *testing.T) {
 	type fields struct {
 		tpy      reflect.Type
 		fields   []field
-		expected [][]expected
+		expected [][]item
 		samples  []string
 	}
 	tests := []struct {

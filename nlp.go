@@ -3,11 +3,13 @@ package nlp
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/Shixzie/nlp/parser"
 	"github.com/cdipaolo/goml/base"
@@ -69,13 +71,13 @@ func (nl *NL) Learn() error {
 type model struct {
 	tpy          reflect.Type
 	fields       []field
-	expected     [][]expected
+	expected     [][]item
 	samples      []string
 	timeFormat   string
 	timeLocation *time.Location
 }
 
-type expected struct {
+type item struct {
 	limit bool
 	value string
 	field field
@@ -88,23 +90,31 @@ type field struct {
 }
 
 // ModelOption is an option for a specific model
-type ModelOption func(*model)
+type ModelOption func(*model) error
 
 // WithTimeFormat sets the format used in time.Parse(format, val),
 // note that format can't contain any spaces, the default is 01-02-2006_3:04pm
 func WithTimeFormat(format string) ModelOption {
-	return func(m *model) {
-		m.timeFormat = strings.Replace(format, " ", "", -1)
+	return func(m *model) error {
+		for _, v := range format {
+			if unicode.IsSpace(v) {
+				return errors.New("time format can't contain any spaces")
+			}
+		}
+		m.timeFormat = format
+		return nil
 	}
 }
 
 // WithTimeLocation sets the location used in time.ParseInLocation(format, value, loc),
 // the default is time.Local
 func WithTimeLocation(loc *time.Location) ModelOption {
-	return func(m *model) {
-		if loc != nil {
-			m.timeLocation = loc
+	return func(m *model) error {
+		if loc == nil {
+			return errors.New("time location can't be nil")
 		}
+		m.timeLocation = loc
+		return nil
 	}
 }
 
@@ -126,12 +136,15 @@ func (nl *NL) RegisterModel(i interface{}, samples []string, ops ...ModelOption)
 		mod := &model{
 			tpy:          tpy,
 			samples:      samples,
-			expected:     make([][]expected, len(samples)),
+			expected:     make([][]item, len(samples)),
 			timeFormat:   "01-02-2006_3:04pm",
 			timeLocation: time.Local,
 		}
 		for _, op := range ops {
-			op(mod)
+			err := op(mod)
+			if err != nil {
+				return err
+			}
 		}
 	NextField:
 		for i := 0; i < tpy.NumField(); i++ {
@@ -162,7 +175,7 @@ func (m *model) learn() error {
 		if err != nil {
 			return err
 		}
-		var exps []expected
+		var exps []item
 		var hasAtLeastOneKey bool
 		for _, tk := range tokens {
 			if tk.Kw {
@@ -171,14 +184,14 @@ func (m *model) learn() error {
 				for _, f := range m.fields {
 					if tk.Val == f.name {
 						mistypedField = false
-						exps = append(exps, expected{field: f, value: tk.Val})
+						exps = append(exps, item{field: f, value: tk.Val})
 					}
 				}
 				if mistypedField {
 					return fmt.Errorf("sample#%d: mistyped field %q", sid, tk.Val)
 				}
 			} else {
-				exps = append(exps, expected{limit: true, value: tk.Val})
+				exps = append(exps, item{limit: true, value: tk.Val})
 			}
 		}
 		if !hasAtLeastOneKey {
@@ -189,7 +202,7 @@ func (m *model) learn() error {
 	return nil
 }
 
-func (m *model) selectBestSample(expr string) []expected {
+func (m *model) selectBestSample(expr string) []item {
 	// slice [sample_id]score
 	scores := make([]int, len(m.samples))
 
@@ -200,7 +213,7 @@ func (m *model) selectBestSample(expr string) []expected {
 
 	// fmt.Printf("tokens: %v\n", tokens)
 
-	mapping := make([][]expected, len(m.samples))
+	mapping := make([][]item, len(m.samples))
 	limitsOrder := make([][]string, len(m.samples)+1)
 
 	for sid, exps := range m.expected {
@@ -235,7 +248,7 @@ func (m *model) selectBestSample(expr string) []expected {
 					scores[sid] = scores[sid] + 1
 					if len(currentVal) > 0 {
 						// fmt.Printf("appending: %v {%v}\n", strings.Join(currentVal, " "), e.field.n)
-						mapping[sid] = append(mapping[sid], expected{field: e.field, value: strings.Join(currentVal, " ")})
+						mapping[sid] = append(mapping[sid], item{field: e.field, value: strings.Join(currentVal, " ")})
 						currentVal = currentVal[:0]
 						lastToken = i
 						continue expecteds
@@ -251,7 +264,7 @@ func (m *model) selectBestSample(expr string) []expected {
 			}
 			if len(currentVal) > 0 {
 				// fmt.Printf("appending: %v {%v}\n", strings.Join(currentVal, " "), e.field.n)
-				mapping[sid] = append(mapping[sid], expected{field: e.field, value: strings.Join(currentVal, " ")})
+				mapping[sid] = append(mapping[sid], item{field: e.field, value: strings.Join(currentVal, " ")})
 			}
 		}
 		// fmt.Printf("\n\n")
