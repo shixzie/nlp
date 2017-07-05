@@ -20,10 +20,12 @@ time.Duration
 
 ## Installation
 ```
-go get github.com/Shixzie/nlp
+$ go get github.com/Shixzie/nlp
+$ cd $GOPATH/src/github.com/Shixzie/nlp
+$ make deps # fetch dependencies
 ```
 
-**Go 1.7 or above is required**
+**Go 1.7+ is required**
 
 
 **Feel free to create PR's and open Issues :)**
