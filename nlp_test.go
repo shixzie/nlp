@@ -53,37 +53,37 @@ func TestNL_P(t *testing.T) {
 	cases := []struct {
 		name       string
 		expression string
-		want       interface{}
+		want       *T
 	}{
 		{
 			"string",
 			"string Hello World",
-			"Hello World",
+			&T{String: "Hello World"},
 		},
 		{
 			"int",
 			"int 42",
-			int(42),
+			&T{Int: 42},
 		},
 		{
 			"uint",
 			"uint 43",
-			uint(43),
+			&T{Uint: 43},
 		},
 		{
 			"float",
 			"float 44",
-			float32(44),
+			&T{Float: 44},
 		},
 		{
 			"time",
 			"time 05-18-1999_6:42pm",
-			tim,
+			&T{Time: tim},
 		},
 		{
 			"duration",
 			"dur 4h2m",
-			dur,
+			&T{Dur: dur},
 		},
 		{
 			"string int",
@@ -104,40 +104,8 @@ func TestNL_P(t *testing.T) {
 	}
 	for i, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			res := nl.P(tt.expression)
-			if c, ok := res.(*T); ok {
-				switch v := tt.want.(type) {
-				case string:
-					if c.String != v {
-						t.Errorf("test#%d: got %v want %v", i, c.String, v)
-					}
-				case int:
-					if c.Int != v {
-						t.Errorf("test#%d: got %v want %v", i, c.Int, v)
-					}
-				case uint:
-					if c.Uint != v {
-						t.Errorf("test#%d: got %v want %v", i, c.Uint, v)
-					}
-				case float32:
-					if c.Float != v {
-						t.Errorf("test#%d: got %v want %v", i, c.Float, v)
-					}
-				case time.Time:
-					if !c.Time.Equal(v) {
-						t.Errorf("test#%d: got %v want %v", i, c.Time, v)
-					}
-				case time.Duration:
-					if c.Dur != v {
-						t.Errorf("test#%d: got %v want %v", i, c.Dur, v)
-					}
-				case *T:
-					if !reflect.DeepEqual(c, v) {
-						t.Errorf("test#%d: got %v want %v", i, c, v)
-					}
-				}
-			} else {
-				t.Errorf("test#%d: got %T want %T", i, res, &T{})
+			if res := nl.P(tt.expression); !reflect.DeepEqual(res, tt.want) {
+				t.Errorf("test#%d: got %v want %v", i, res, tt.want)
 			}
 		})
 	}
@@ -277,6 +245,68 @@ func TestNL_Learn(t *testing.T) {
 			}
 			if err := nl.Learn(); (err != nil) != tt.wantErr {
 				t.Errorf("[%d] NL.Learn() error = %v, wantErr %v", i, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestWithTimeFormat(t *testing.T) {
+	type args struct {
+		format string
+		m      *model
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			"invalid format",
+			args{"2006 01 02", &model{}},
+			true,
+		},
+		{
+			"valid format",
+			args{"2006", &model{}},
+			false,
+		},
+	}
+	for i, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			op := WithTimeFormat(tt.args.format)
+			if err := op(tt.args.m); (err != nil) != tt.wantErr {
+				t.Errorf("[%d] WithTimeFormat() error = %v, wantErr %v", i, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestWithTimeLocation(t *testing.T) {
+	type args struct {
+		loc *time.Location
+		m   *model
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			"invalid location",
+			args{nil, &model{}},
+			true,
+		},
+		{
+			"valid format",
+			args{time.Local, &model{}},
+			false,
+		},
+	}
+	for i, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			op := WithTimeLocation(tt.args.loc)
+			if err := op(tt.args.m); (err != nil) != tt.wantErr {
+				t.Errorf("[%d] WithTimeFormat() error = %v, wantErr %v", i, err, tt.wantErr)
 			}
 		})
 	}
