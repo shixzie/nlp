@@ -205,10 +205,7 @@ func (m *model) selectBestSample(expr []byte) []item {
 	// slice [sample_id]score
 	scores := make([]int, len(m.samples))
 
-	tokens, err := parser.ParseSample(0, expr)
-	if err != nil {
-		return nil
-	}
+	tokens, _ := parser.ParseSample(0, expr)
 
 	// fmt.Printf("tokens: %v\n", tokens)
 
@@ -231,14 +228,14 @@ func (m *model) selectBestSample(expr []byte) []item {
 			// fmt.Printf("reading: %v\n", reading)
 			for i := lastToken; i < len(tokens); i++ {
 				t := tokens[i]
-				// fmt.Printf("token: %v - isLimit: %v\n", t.Val, isLimit(t.Val))
+				// fmt.Printf("token: %v - isLimit: %v\n", t.Val, m.isLimit(t.Val, sid))
 				if m.isLimit(t.Val, sid) {
 					if sid == 0 {
 						limitsOrder[0] = append(limitsOrder[0], t.Val)
 					}
-					scores[sid] = scores[sid] + 1
+					scores[sid]++
 					if len(currentVal) > 0 {
-						// fmt.Printf("appending: %v {%v}\n", strings.Join(currentVal, " "), e.field.n)
+						// fmt.Printf("appending: %v {%v}\n", bytes.Join(currentVal, []byte{' '}), e.field.name)
 						mapping[sid] = append(mapping[sid], item{field: e.field, value: bytes.Join(currentVal, []byte{' '})})
 						currentVal = currentVal[:0]
 						lastToken = i
@@ -254,7 +251,7 @@ func (m *model) selectBestSample(expr []byte) []item {
 				}
 			}
 			if len(currentVal) > 0 {
-				// fmt.Printf("appending: %v {%v}\n", strings.Join(currentVal, " "), e.field.n)
+				// fmt.Printf("appending: %v {%v}\n", bytes.Join(currentVal, []byte{' '}), e.field.name)
 				mapping[sid] = append(mapping[sid], item{field: e.field, value: bytes.Join(currentVal, []byte{' '})})
 			}
 		}
@@ -270,12 +267,20 @@ order:
 				continue order
 			}
 		}
-		scores[i-1] = scores[i-1] + 1
+		scores[i-1]++
 	}
 
-	// fmt.Printf("orders: %v\n\n", limitsOrder)
+	// fmt.Printf("orders: %s\n\n", limitsOrder)
 	// fmt.Printf("scores: %v\n", scores)
 
+	bestMapping := selectBestMapping(scores)
+	if bestMapping == -1 {
+		return nil
+	}
+	return mapping[bestMapping]
+}
+
+func selectBestMapping(scores []int) int {
 	bestScore, bestMapping := -1, -1
 	for id, score := range scores {
 		if score > bestScore {
@@ -283,14 +288,14 @@ order:
 			bestMapping = id
 		}
 	}
-	if bestScore == -1 {
-		return nil
-	}
-	return mapping[bestMapping]
+	return bestMapping
 }
 
 func (m *model) fit(expr string) interface{} {
 	val := reflect.New(m.tpy)
+	if len(expr) == 0 {
+		return val.Interface()
+	}
 	exps := m.selectBestSample([]byte(expr))
 	if len(exps) > 0 {
 		for _, e := range exps {
