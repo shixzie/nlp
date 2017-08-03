@@ -42,9 +42,9 @@ RegisterModel takes 3 parameters, an empty struct, a set of samples and some opt
 The empty struct lets nlp know all possible values inside the text, for example:
 ```go
 type Song struct {
-    Name        string // fields must be exported
-    Artist      string
-    ReleasedAt  time.Time
+	Name        string // fields must be exported
+	Artist      string
+	ReleasedAt  time.Time
 }
 err := nl.RegisterModel(Song{}, someSamples, nlp.WithTimeFormat("2006"))
 if err != nil {
@@ -66,7 +66,7 @@ songSamples := []string{
 	"play {Name} from {Artist}",
 	"play {Name}",
 	"from {Artist} play {Name}",
-    "play something from {ReleasedAt}",
+	"play something from {ReleasedAt}",
 }
 ```
 
@@ -104,7 +104,7 @@ so they're able to fit expressions in the future.
 // must call after all models are registrated and before calling nl.P()
 err := nl.Learn() 
 if err != nil {
-    panic(err)
+	panic(err)
 }
 // ...
 ```
@@ -161,7 +161,7 @@ and then **a pointer to a filled struct with the type used to register the model
 type Song struct {
 	Name       string
 	Artist     string
-    ReleasedAt time.Time
+	ReleasedAt time.Time
 }
 
 songSamples := []string{
@@ -169,7 +169,7 @@ songSamples := []string{
 	"play {Name} from {Artist}",
 	"play {Name}",
 	"from {Artist} play {Name}",
-    "play something from {ReleasedAt}",
+	"play something from {ReleasedAt}",
 }
 
 nl := nlp.New()
