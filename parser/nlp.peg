@@ -8,13 +8,13 @@ import "errors"
 // Token is a sample token
 type Token struct {
     Kw bool
-    Val string
+    Val []byte
 }
 
 // ParseSample will return the tokens within the sample
-func ParseSample(sampleID int, sample string) ([]Token, error) {
+func ParseSample(sampleID int, sample []byte) ([]Token, error) {
     samplename := fmt.Sprintf("sample#%d", sampleID)
-    tokens, err := Parse(samplename, []byte(sample))
+    tokens, err := Parse(samplename, sample)
     var errs errList
     if err != nil {
         list := err.(errList)
@@ -62,7 +62,7 @@ Keyword "keyword"
 
 Identifier "identifier"
 = [^{} \t\r\n]+ {
-    return Token{Val: string(c.text)}, nil
+    return Token{Val: c.text}, nil
 }
 
 Spacing "spacing"

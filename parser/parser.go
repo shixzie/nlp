@@ -17,13 +17,13 @@ import (
 // Token is a sample token
 type Token struct {
 	Kw  bool
-	Val string
+	Val []byte
 }
 
 // ParseSample will return the tokens within the sample
-func ParseSample(sampleID int, sample string) ([]Token, error) {
+func ParseSample(sampleID int, sample []byte) ([]Token, error) {
 	samplename := fmt.Sprintf("sample#%d", sampleID)
-	tokens, err := Parse(samplename, []byte(sample))
+	tokens, err := Parse(samplename, sample)
 	var errs errList
 	if err != nil {
 		list := err.(errList)
@@ -41,28 +41,28 @@ var g = &grammar{
 		{
 			name:        "Sample",
 			displayName: "\"sample\"",
-			pos:         position{line: 32, col: 1, offset: 693},
+			pos:         position{line: 32, col: 1, offset: 685},
 			expr: &actionExpr{
-				pos: position{line: 33, col: 3, offset: 711},
+				pos: position{line: 33, col: 3, offset: 703},
 				run: (*parser).callonSample1,
 				expr: &labeledExpr{
-					pos:   position{line: 33, col: 3, offset: 711},
+					pos:   position{line: 33, col: 3, offset: 703},
 					label: "vs",
 					expr: &zeroOrMoreExpr{
-						pos: position{line: 33, col: 6, offset: 714},
+						pos: position{line: 33, col: 6, offset: 706},
 						expr: &choiceExpr{
-							pos: position{line: 33, col: 7, offset: 715},
+							pos: position{line: 33, col: 7, offset: 707},
 							alternatives: []interface{}{
 								&ruleRefExpr{
-									pos:  position{line: 33, col: 7, offset: 715},
+									pos:  position{line: 33, col: 7, offset: 707},
 									name: "Identifier",
 								},
 								&ruleRefExpr{
-									pos:  position{line: 33, col: 20, offset: 728},
+									pos:  position{line: 33, col: 20, offset: 720},
 									name: "Keyword",
 								},
 								&ruleRefExpr{
-									pos:  position{line: 33, col: 30, offset: 738},
+									pos:  position{line: 33, col: 30, offset: 730},
 									name: "Spacing",
 								},
 							},
@@ -74,38 +74,38 @@ var g = &grammar{
 		{
 			name:        "Keyword",
 			displayName: "\"keyword\"",
-			pos:         position{line: 48, col: 1, offset: 1058},
+			pos:         position{line: 48, col: 1, offset: 1050},
 			expr: &choiceExpr{
-				pos: position{line: 49, col: 3, offset: 1078},
+				pos: position{line: 49, col: 3, offset: 1070},
 				alternatives: []interface{}{
 					&actionExpr{
-						pos: position{line: 49, col: 3, offset: 1078},
+						pos: position{line: 49, col: 3, offset: 1070},
 						run: (*parser).callonKeyword2,
 						expr: &seqExpr{
-							pos: position{line: 49, col: 3, offset: 1078},
+							pos: position{line: 49, col: 3, offset: 1070},
 							exprs: []interface{}{
 								&litMatcher{
-									pos:        position{line: 49, col: 3, offset: 1078},
+									pos:        position{line: 49, col: 3, offset: 1070},
 									val:        "{",
 									ignoreCase: false,
 								},
 								&oneOrMoreExpr{
-									pos: position{line: 49, col: 7, offset: 1082},
+									pos: position{line: 49, col: 7, offset: 1074},
 									expr: &ruleRefExpr{
-										pos:  position{line: 49, col: 7, offset: 1082},
+										pos:  position{line: 49, col: 7, offset: 1074},
 										name: "Spacing",
 									},
 								},
 								&labeledExpr{
-									pos:   position{line: 49, col: 16, offset: 1091},
+									pos:   position{line: 49, col: 16, offset: 1083},
 									label: "v",
 									expr: &ruleRefExpr{
-										pos:  position{line: 49, col: 18, offset: 1093},
+										pos:  position{line: 49, col: 18, offset: 1085},
 										name: "Identifier",
 									},
 								},
 								&litMatcher{
-									pos:        position{line: 49, col: 29, offset: 1104},
+									pos:        position{line: 49, col: 29, offset: 1096},
 									val:        "}",
 									ignoreCase: false,
 								},
@@ -113,33 +113,33 @@ var g = &grammar{
 						},
 					},
 					&actionExpr{
-						pos: position{line: 52, col: 3, offset: 1166},
+						pos: position{line: 52, col: 3, offset: 1158},
 						run: (*parser).callonKeyword10,
 						expr: &seqExpr{
-							pos: position{line: 52, col: 3, offset: 1166},
+							pos: position{line: 52, col: 3, offset: 1158},
 							exprs: []interface{}{
 								&litMatcher{
-									pos:        position{line: 52, col: 3, offset: 1166},
+									pos:        position{line: 52, col: 3, offset: 1158},
 									val:        "{",
 									ignoreCase: false,
 								},
 								&labeledExpr{
-									pos:   position{line: 52, col: 7, offset: 1170},
+									pos:   position{line: 52, col: 7, offset: 1162},
 									label: "v",
 									expr: &ruleRefExpr{
-										pos:  position{line: 52, col: 9, offset: 1172},
+										pos:  position{line: 52, col: 9, offset: 1164},
 										name: "Identifier",
 									},
 								},
 								&oneOrMoreExpr{
-									pos: position{line: 52, col: 20, offset: 1183},
+									pos: position{line: 52, col: 20, offset: 1175},
 									expr: &ruleRefExpr{
-										pos:  position{line: 52, col: 20, offset: 1183},
+										pos:  position{line: 52, col: 20, offset: 1175},
 										name: "Spacing",
 									},
 								},
 								&litMatcher{
-									pos:        position{line: 52, col: 29, offset: 1192},
+									pos:        position{line: 52, col: 29, offset: 1184},
 									val:        "}",
 									ignoreCase: false,
 								},
@@ -147,40 +147,40 @@ var g = &grammar{
 						},
 					},
 					&actionExpr{
-						pos: position{line: 55, col: 3, offset: 1254},
+						pos: position{line: 55, col: 3, offset: 1246},
 						run: (*parser).callonKeyword18,
 						expr: &seqExpr{
-							pos: position{line: 55, col: 3, offset: 1254},
+							pos: position{line: 55, col: 3, offset: 1246},
 							exprs: []interface{}{
 								&litMatcher{
-									pos:        position{line: 55, col: 3, offset: 1254},
+									pos:        position{line: 55, col: 3, offset: 1246},
 									val:        "{",
 									ignoreCase: false,
 								},
 								&oneOrMoreExpr{
-									pos: position{line: 55, col: 7, offset: 1258},
+									pos: position{line: 55, col: 7, offset: 1250},
 									expr: &ruleRefExpr{
-										pos:  position{line: 55, col: 7, offset: 1258},
+										pos:  position{line: 55, col: 7, offset: 1250},
 										name: "Spacing",
 									},
 								},
 								&labeledExpr{
-									pos:   position{line: 55, col: 16, offset: 1267},
+									pos:   position{line: 55, col: 16, offset: 1259},
 									label: "v",
 									expr: &ruleRefExpr{
-										pos:  position{line: 55, col: 18, offset: 1269},
+										pos:  position{line: 55, col: 18, offset: 1261},
 										name: "Identifier",
 									},
 								},
 								&oneOrMoreExpr{
-									pos: position{line: 55, col: 29, offset: 1280},
+									pos: position{line: 55, col: 29, offset: 1272},
 									expr: &ruleRefExpr{
-										pos:  position{line: 55, col: 29, offset: 1280},
+										pos:  position{line: 55, col: 29, offset: 1272},
 										name: "Spacing",
 									},
 								},
 								&litMatcher{
-									pos:        position{line: 55, col: 38, offset: 1289},
+									pos:        position{line: 55, col: 38, offset: 1281},
 									val:        "}",
 									ignoreCase: false,
 								},
@@ -188,26 +188,26 @@ var g = &grammar{
 						},
 					},
 					&actionExpr{
-						pos: position{line: 58, col: 3, offset: 1351},
+						pos: position{line: 58, col: 3, offset: 1343},
 						run: (*parser).callonKeyword28,
 						expr: &seqExpr{
-							pos: position{line: 58, col: 3, offset: 1351},
+							pos: position{line: 58, col: 3, offset: 1343},
 							exprs: []interface{}{
 								&litMatcher{
-									pos:        position{line: 58, col: 3, offset: 1351},
+									pos:        position{line: 58, col: 3, offset: 1343},
 									val:        "{",
 									ignoreCase: false,
 								},
 								&labeledExpr{
-									pos:   position{line: 58, col: 7, offset: 1355},
+									pos:   position{line: 58, col: 7, offset: 1347},
 									label: "v",
 									expr: &ruleRefExpr{
-										pos:  position{line: 58, col: 9, offset: 1357},
+										pos:  position{line: 58, col: 9, offset: 1349},
 										name: "Identifier",
 									},
 								},
 								&litMatcher{
-									pos:        position{line: 58, col: 20, offset: 1368},
+									pos:        position{line: 58, col: 20, offset: 1360},
 									val:        "}",
 									ignoreCase: false,
 								},
@@ -220,14 +220,14 @@ var g = &grammar{
 		{
 			name:        "Identifier",
 			displayName: "\"identifier\"",
-			pos:         position{line: 63, col: 1, offset: 1430},
+			pos:         position{line: 63, col: 1, offset: 1422},
 			expr: &actionExpr{
-				pos: position{line: 64, col: 3, offset: 1456},
+				pos: position{line: 64, col: 3, offset: 1448},
 				run: (*parser).callonIdentifier1,
 				expr: &oneOrMoreExpr{
-					pos: position{line: 64, col: 3, offset: 1456},
+					pos: position{line: 64, col: 3, offset: 1448},
 					expr: &charClassMatcher{
-						pos:        position{line: 64, col: 3, offset: 1456},
+						pos:        position{line: 64, col: 3, offset: 1448},
 						val:        "[^{} \\t\\r\\n]",
 						chars:      []rune{'{', '}', ' ', '\t', '\r', '\n'},
 						ignoreCase: false,
@@ -239,21 +239,21 @@ var g = &grammar{
 		{
 			name:        "Spacing",
 			displayName: "\"spacing\"",
-			pos:         position{line: 68, col: 1, offset: 1518},
+			pos:         position{line: 68, col: 1, offset: 1502},
 			expr: &choiceExpr{
-				pos: position{line: 69, col: 3, offset: 1538},
+				pos: position{line: 69, col: 3, offset: 1522},
 				alternatives: []interface{}{
 					&oneOrMoreExpr{
-						pos: position{line: 69, col: 3, offset: 1538},
+						pos: position{line: 69, col: 3, offset: 1522},
 						expr: &ruleRefExpr{
-							pos:  position{line: 69, col: 3, offset: 1538},
+							pos:  position{line: 69, col: 3, offset: 1522},
 							name: "Space",
 						},
 					},
 					&oneOrMoreExpr{
-						pos: position{line: 69, col: 12, offset: 1547},
+						pos: position{line: 69, col: 12, offset: 1531},
 						expr: &ruleRefExpr{
-							pos:  position{line: 69, col: 12, offset: 1547},
+							pos:  position{line: 69, col: 12, offset: 1531},
 							name: "_",
 						},
 					},
@@ -263,9 +263,9 @@ var g = &grammar{
 		{
 			name:        "Space",
 			displayName: "\"Space\"",
-			pos:         position{line: 71, col: 1, offset: 1551},
+			pos:         position{line: 71, col: 1, offset: 1535},
 			expr: &litMatcher{
-				pos:        position{line: 72, col: 3, offset: 1567},
+				pos:        position{line: 72, col: 3, offset: 1551},
 				val:        " ",
 				ignoreCase: false,
 			},
@@ -273,9 +273,9 @@ var g = &grammar{
 		{
 			name:        "_",
 			displayName: "\"whitespace\"",
-			pos:         position{line: 74, col: 1, offset: 1572},
+			pos:         position{line: 74, col: 1, offset: 1556},
 			expr: &charClassMatcher{
-				pos:        position{line: 75, col: 3, offset: 1589},
+				pos:        position{line: 75, col: 3, offset: 1573},
 				val:        "[\\t\\r\\n]",
 				chars:      []rune{'\t', '\r', '\n'},
 				ignoreCase: false,
@@ -347,7 +347,7 @@ func (p *parser) callonKeyword28() (interface{}, error) {
 }
 
 func (c *current) onIdentifier1() (interface{}, error) {
-	return Token{Val: string(c.text)}, nil
+	return Token{Val: c.text}, nil
 }
 
 func (p *parser) callonIdentifier1() (interface{}, error) {
@@ -409,6 +409,16 @@ func Recover(b bool) Option {
 	}
 }
 
+// GlobalStore creates an Option to set a key to a certain value in
+// the globalStore.
+func GlobalStore(key string, value interface{}) Option {
+	return func(p *parser) Option {
+		old := p.cur.globalStore[key]
+		p.cur.globalStore[key] = value
+		return GlobalStore(key, old)
+	}
+}
+
 // ParseFile parses the file identified by filename.
 func ParseFile(filename string, opts ...Option) (i interface{}, err error) {
 	f, err := os.Open(filename)
@@ -416,7 +426,9 @@ func ParseFile(filename string, opts ...Option) (i interface{}, err error) {
 		return nil, err
 	}
 	defer func() {
-		err = f.Close()
+		if closeErr := f.Close(); closeErr != nil {
+			err = closeErr
+		}
 	}()
 	return ParseReader(filename, f, opts...)
 }
@@ -458,6 +470,9 @@ type savepoint struct {
 type current struct {
 	pos  position // start position of the match
 	text []byte   // raw text of the match
+
+	// the globalStore allows the parser to store arbitrary values
+	globalStore map[string]interface{}
 }
 
 // the AST types...
@@ -529,13 +544,14 @@ type litMatcher struct {
 }
 
 type charClassMatcher struct {
-	pos        position
-	val        string
-	chars      []rune
-	ranges     []rune
-	classes    []*unicode.RangeTable
-	ignoreCase bool
-	inverted   bool
+	pos             position
+	val             string
+	basicLatinChars [128]bool
+	chars           []rune
+	ranges          []rune
+	classes         []*unicode.RangeTable
+	ignoreCase      bool
+	inverted        bool
 }
 
 type anyMatcher position
@@ -603,13 +619,16 @@ func (p *parserError) Error() string {
 // newParser creates a parser with the specified input source and options.
 func newParser(filename string, b []byte, opts ...Option) *parser {
 	p := &parser{
-		filename:        filename,
-		errs:            new(errList),
-		data:            b,
-		pt:              savepoint{position: position{line: 1}},
-		recover:         true,
+		filename: filename,
+		errs:     new(errList),
+		data:     b,
+		pt:       savepoint{position: position{line: 1}},
+		recover:  true,
+		cur: current{
+			globalStore: make(map[string]interface{}),
+		},
 		maxFailPos:      position{col: 1, line: 1},
-		maxFailExpected: make(map[string]struct{}),
+		maxFailExpected: make([]string, 0, 20),
 	}
 	p.setOptions(opts)
 	return p
@@ -657,7 +676,7 @@ type parser struct {
 
 	// parse fail
 	maxFailPos            position
-	maxFailExpected       map[string]struct{}
+	maxFailExpected       []string
 	maxFailInvertExpected bool
 }
 
@@ -750,13 +769,13 @@ func (p *parser) failAt(fail bool, pos position, want string) {
 
 		if pos.offset > p.maxFailPos.offset {
 			p.maxFailPos = pos
-			p.maxFailExpected = make(map[string]struct{})
+			p.maxFailExpected = p.maxFailExpected[:0]
 		}
 
 		if p.maxFailInvertExpected {
 			want = "!" + want
 		}
-		p.maxFailExpected[want] = struct{}{}
+		p.maxFailExpected = append(p.maxFailExpected, want)
 	}
 }
 
@@ -862,13 +881,17 @@ func (p *parser) parse(g *grammar) (val interface{}, err error) {
 		if len(*p.errs) == 0 {
 			// If parsing fails, but no errors have been recorded, the expected values
 			// for the farthest parser position are returned as error.
-			expected := make([]string, 0, len(p.maxFailExpected))
+			maxFailExpectedMap := make(map[string]struct{}, len(p.maxFailExpected))
+			for _, v := range p.maxFailExpected {
+				maxFailExpectedMap[v] = struct{}{}
+			}
+			expected := make([]string, 0, len(maxFailExpectedMap))
 			eof := false
-			if _, ok := p.maxFailExpected["!."]; ok {
-				delete(p.maxFailExpected, "!.")
+			if _, ok := maxFailExpectedMap["!."]; ok {
+				delete(maxFailExpectedMap, "!.")
 				eof = true
 			}
-			for k := range p.maxFailExpected {
+			for k := range maxFailExpectedMap {
 				expected = append(expected, k)
 			}
 			sort.Strings(expected)
@@ -1046,11 +1069,13 @@ func (p *parser) parseCharClassMatcher(chr *charClassMatcher) (interface{}, bool
 
 	cur := p.pt.rn
 	start := p.pt
+
 	// can't match EOF
 	if cur == utf8.RuneError {
 		p.failAt(false, start.position, chr.val)
 		return nil, false
 	}
+
 	if chr.ignoreCase {
 		cur = unicode.ToLower(cur)
 	}
@@ -1232,7 +1257,7 @@ func (p *parser) parseSeqExpr(seq *seqExpr) (interface{}, bool) {
 		defer p.out(p.in("parseSeqExpr"))
 	}
 
-	var vals []interface{}
+	vals := make([]interface{}, 0, len(seq.exprs))
 
 	pt := p.pt
 	for _, expr := range seq.exprs {

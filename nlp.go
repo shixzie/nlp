@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
 	"unicode"
 
@@ -49,7 +48,7 @@ func (nl *NL) Learn() error {
 			}
 			for _, s := range nl.models[i].samples {
 				stream <- base.TextDatapoint{
-					X: s,
+					X: string(s),
 					Y: uint8(i),
 				}
 			}
@@ -72,14 +71,14 @@ type model struct {
 	tpy          reflect.Type
 	fields       []field
 	expected     [][]item
-	samples      []string
+	samples      [][]byte
 	timeFormat   string
 	timeLocation *time.Location
 }
 
 type item struct {
 	limit bool
-	value string
+	value []byte
 	field field
 }
 
@@ -135,11 +134,11 @@ func (nl *NL) RegisterModel(i interface{}, samples []string, ops ...ModelOption)
 	if tpy.Kind() == reflect.Struct {
 		mod := &model{
 			tpy:          tpy,
-			samples:      samples,
 			expected:     make([][]item, len(samples)),
 			timeFormat:   "01-02-2006_3:04pm",
 			timeLocation: time.Local,
 		}
+		mod.setSamples(samples)
 		for _, op := range ops {
 			err := op(mod)
 			if err != nil {
@@ -182,7 +181,7 @@ func (m *model) learn() error {
 				hasAtLeastOneKey = true
 				mistypedField := true
 				for _, f := range m.fields {
-					if tk.Val == f.name {
+					if string(tk.Val) == f.name {
 						mistypedField = false
 						exps = append(exps, item{field: f, value: tk.Val})
 					}
@@ -202,7 +201,7 @@ func (m *model) learn() error {
 	return nil
 }
 
-func (m *model) selectBestSample(expr string) []item {
+func (m *model) selectBestSample(expr []byte) []item {
 	// slice [sample_id]score
 	scores := make([]int, len(m.samples))
 
@@ -214,20 +213,12 @@ func (m *model) selectBestSample(expr string) []item {
 	// fmt.Printf("tokens: %v\n", tokens)
 
 	mapping := make([][]item, len(m.samples))
-	limitsOrder := make([][]string, len(m.samples)+1)
+	limitsOrder := make([][][]byte, len(m.samples)+1)
 
 	for sid, exps := range m.expected {
-		var currentVal []string
+		var currentVal [][]byte
 		var reading bool
 		var lastToken int
-		isLimit := func(s string) bool {
-			for _, e := range exps {
-				if e.value == s {
-					return true
-				}
-			}
-			return false
-		}
 	expecteds:
 		for _, e := range exps {
 			// fmt.Printf("expecting: %v - limit: %v\n", e.value, e.limit)
@@ -241,14 +232,14 @@ func (m *model) selectBestSample(expr string) []item {
 			for i := lastToken; i < len(tokens); i++ {
 				t := tokens[i]
 				// fmt.Printf("token: %v - isLimit: %v\n", t.Val, isLimit(t.Val))
-				if isLimit(t.Val) {
+				if m.isLimit(t.Val, sid) {
 					if sid == 0 {
 						limitsOrder[0] = append(limitsOrder[0], t.Val)
 					}
 					scores[sid] = scores[sid] + 1
 					if len(currentVal) > 0 {
 						// fmt.Printf("appending: %v {%v}\n", strings.Join(currentVal, " "), e.field.n)
-						mapping[sid] = append(mapping[sid], item{field: e.field, value: strings.Join(currentVal, " ")})
+						mapping[sid] = append(mapping[sid], item{field: e.field, value: bytes.Join(currentVal, []byte{' '})})
 						currentVal = currentVal[:0]
 						lastToken = i
 						continue expecteds
@@ -264,7 +255,7 @@ func (m *model) selectBestSample(expr string) []item {
 			}
 			if len(currentVal) > 0 {
 				// fmt.Printf("appending: %v {%v}\n", strings.Join(currentVal, " "), e.field.n)
-				mapping[sid] = append(mapping[sid], item{field: e.field, value: strings.Join(currentVal, " ")})
+				mapping[sid] = append(mapping[sid], item{field: e.field, value: bytes.Join(currentVal, []byte{' '})})
 			}
 		}
 		// fmt.Printf("\n\n")
@@ -275,7 +266,7 @@ order:
 			continue order
 		}
 		for j := range limitsOrder[i] {
-			if limitsOrder[i][j] != limitsOrder[0][j] {
+			if !bytes.Equal(limitsOrder[i][j], limitsOrder[0][j]) {
 				continue order
 			}
 		}
@@ -300,32 +291,49 @@ order:
 
 func (m *model) fit(expr string) interface{} {
 	val := reflect.New(m.tpy)
-	exps := m.selectBestSample(expr)
+	exps := m.selectBestSample([]byte(expr))
 	if len(exps) > 0 {
 		for _, e := range exps {
 			switch t := e.field.kind.(type) {
 			case reflect.Kind:
 				switch t {
 				case reflect.String:
-					val.Elem().Field(e.field.index).SetString(e.value)
+					val.Elem().Field(e.field.index).SetString(string(e.value))
 				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-					v, _ := strconv.ParseUint(e.value, 10, 0)
+					v, _ := strconv.ParseUint(string(e.value), 10, 0)
 					val.Elem().Field(e.field.index).SetUint(v)
 				case reflect.Float32, reflect.Float64:
-					v, _ := strconv.ParseFloat(e.value, 64)
+					v, _ := strconv.ParseFloat(string(e.value), 64)
 					val.Elem().Field(e.field.index).SetFloat(v)
 				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-					v, _ := strconv.ParseInt(e.value, 10, 0)
+					v, _ := strconv.ParseInt(string(e.value), 10, 0)
 					val.Elem().Field(e.field.index).SetInt(v)
 				}
 			case time.Time:
-				v, _ := time.ParseInLocation(m.timeFormat, e.value, m.timeLocation)
+				v, _ := time.ParseInLocation(m.timeFormat, string(e.value), m.timeLocation)
 				val.Elem().Field(e.field.index).Set(reflect.ValueOf(v))
 			case time.Duration:
-				v, _ := time.ParseDuration(e.value)
+				v, _ := time.ParseDuration(string(e.value))
 				val.Elem().Field(e.field.index).Set(reflect.ValueOf(v))
 			}
 		}
 	}
 	return val.Interface()
+}
+
+// isLimit returns true if s is a limit on expected[id]
+func (m *model) isLimit(s []byte, id int) bool {
+	for _, e := range m.expected[id] {
+		if bytes.Equal(e.value, s) {
+			return true
+		}
+	}
+	return false
+}
+
+// setSample converts the []string samples to [][]byte
+func (m *model) setSamples(samples []string) {
+	for _, s := range samples {
+		m.samples = append(m.samples, []byte(s))
+	}
 }

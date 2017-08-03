@@ -8,7 +8,7 @@ import (
 func TestParseSample(t *testing.T) {
 	type args struct {
 		sampleID int
-		sample   string
+		sample   []byte
 	}
 	tests := []struct {
 		name    string
@@ -18,29 +18,29 @@ func TestParseSample(t *testing.T) {
 	}{
 		{
 			"err: empty sample",
-			args{0, ""},
+			args{0, nil},
 			nil,
 			true,
 		},
 		{
 			"normal sample",
-			args{1, "play {Name} from {Artist}"},
+			args{1, []byte("play {Name} from {Artist}")},
 			[]Token{
-				Token{Val: "play"},
-				Token{Kw: true, Val: "Name"},
-				Token{Val: "from"},
-				Token{Kw: true, Val: "Artist"},
+				Token{Val: []byte("play")},
+				Token{Kw: true, Val: []byte("Name")},
+				Token{Val: []byte("from")},
+				Token{Kw: true, Val: []byte("Artist")},
 			},
 			false,
 		},
 		{
 			"spacing inside keys",
-			args{1, "play { 	Name} from {	Artist		}"},
+			args{1, []byte("play { 	Name} from {	Artist		}")},
 			[]Token{
-				Token{Val: "play"},
-				Token{Kw: true, Val: "Name"},
-				Token{Val: "from"},
-				Token{Kw: true, Val: "Artist"},
+				Token{Val: []byte("play")},
+				Token{Kw: true, Val: []byte("Name")},
+				Token{Val: []byte("from")},
+				Token{Kw: true, Val: []byte("Artist")},
 			},
 			false,
 		},
