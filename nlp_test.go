@@ -204,7 +204,7 @@ func TestNL_Learn(t *testing.T) {
 			fields{
 				models: []*model{
 					{
-						samples: [][]byte{[]byte{}},
+						samples: [][]byte{{}},
 					},
 				},
 				Output: bytes.NewBufferString(""),
