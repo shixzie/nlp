@@ -1,7 +1,7 @@
-[![GoDoc](https://godoc.org/github.com/Shixzie/nlp?status.svg)](https://godoc.org/github.com/Shixzie/nlp) 
-[![Go Report Card](https://goreportcard.com/badge/github.com/Shixzie/nlp)](https://goreportcard.com/report/github.com/Shixzie/nlp)
-[![Build Status](https://travis-ci.org/Shixzie/nlp.svg?branch=master)](https://travis-ci.org/Shixzie/nlp)
-[![codecov](https://codecov.io/gh/Shixzie/nlp/branch/master/graph/badge.svg)](https://codecov.io/gh/Shixzie/nlp)
+[![GoDoc](https://godoc.org/github.com/shixzie/nlp?status.svg)](https://godoc.org/github.com/shixzie/nlp) 
+[![Go Report Card](https://goreportcard.com/badge/github.com/shixzie/nlp)](https://goreportcard.com/report/github.com/shixzie/nlp)
+[![Build Status](https://travis-ci.org/shixzie/nlp.svg?branch=master)](https://travis-ci.org/shixzie/nlp)
+[![codecov](https://codecov.io/gh/shixzie/nlp/branch/master/graph/badge.svg)](https://codecov.io/gh/shixzie/nlp)
 
 
 # nlp
@@ -20,9 +20,7 @@ time.Duration
 
 ## Installation
 ```
-$ go get github.com/Shixzie/nlp
-$ cd $GOPATH/src/github.com/Shixzie/nlp
-$ make deps # fetch dependencies
+go get github.com/Shixzie/nlp
 ```
 
 **Go 1.7+ is required**
