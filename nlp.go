@@ -44,7 +44,7 @@ func (nl *NL) Learn() error {
 		for i := range nl.models {
 			err := nl.models[i].learn()
 			if err != nil {
-				return err
+				return fmt.Errorf("model#%d %v", i, err)
 			}
 			for _, s := range nl.models[i].samples {
 				stream <- base.TextDatapoint{
@@ -176,7 +176,8 @@ func (m *model) learn() error {
 		}
 		var exps []item
 		var hasAtLeastOneKey bool
-		for _, tk := range tokens {
+		l := len(tokens)
+		for i, tk := range tokens {
 			if tk.Kw {
 				hasAtLeastOneKey = true
 				mistypedField := true
@@ -190,7 +191,12 @@ func (m *model) learn() error {
 					return fmt.Errorf("sample#%d: mistyped field %q", sid, tk.Val)
 				}
 			} else {
-				exps = append(exps, item{limit: true, value: tk.Val})
+				if i+1 < l {
+					if tokens[i+1].Kw {
+						exps = append(exps, item{limit: true, value: tk.Val})
+						continue
+					}
+				}
 			}
 		}
 		if !hasAtLeastOneKey {
@@ -207,8 +213,6 @@ func (m *model) selectBestSample(expr []byte) []item {
 
 	tokens, _ := parser.ParseSample(0, expr)
 
-	// fmt.Printf("tokens: %v\n", tokens)
-
 	mapping := make([][]item, len(m.samples))
 	limitsOrder := make([][][]byte, len(m.samples)+1)
 
@@ -218,7 +222,7 @@ func (m *model) selectBestSample(expr []byte) []item {
 		var lastToken int
 	expecteds:
 		for _, e := range exps {
-			// fmt.Printf("expecting: %v - limit: %v\n", e.value, e.limit)
+			// fmt.Printf("expecting: %s - limit: %v\n", e.value, e.limit)
 			if e.limit {
 				reading = false
 				limitsOrder[sid+1] = append(limitsOrder[sid+1], e.value)
@@ -228,14 +232,14 @@ func (m *model) selectBestSample(expr []byte) []item {
 			// fmt.Printf("reading: %v\n", reading)
 			for i := lastToken; i < len(tokens); i++ {
 				t := tokens[i]
-				// fmt.Printf("token: %v - isLimit: %v\n", t.Val, m.isLimit(t.Val, sid))
+				// fmt.Printf("token: %s - isLimit: %v\n", t.Val, m.isLimit(t.Val, sid))
 				if m.isLimit(t.Val, sid) {
 					if sid == 0 {
 						limitsOrder[0] = append(limitsOrder[0], t.Val)
 					}
 					scores[sid]++
 					if len(currentVal) > 0 {
-						// fmt.Printf("appending: %v {%v}\n", bytes.Join(currentVal, []byte{' '}), e.field.name)
+						// fmt.Printf("appending: %s {%v}\n", bytes.Join(currentVal, []byte{' '}), e.field.name)
 						mapping[sid] = append(mapping[sid], item{field: e.field, value: bytes.Join(currentVal, []byte{' '})})
 						currentVal = currentVal[:0]
 						lastToken = i
@@ -245,13 +249,13 @@ func (m *model) selectBestSample(expr []byte) []item {
 					continue expecteds
 				} else {
 					if reading {
-						// fmt.Printf("adding: %v\n", t.Val)
+						// fmt.Printf("adding: %s\n", t.Val)
 						currentVal = append(currentVal, t.Val)
 					}
 				}
 			}
 			if len(currentVal) > 0 {
-				// fmt.Printf("appending: %v {%v}\n", bytes.Join(currentVal, []byte{' '}), e.field.name)
+				// fmt.Printf("appending: %s {%v}\n", bytes.Join(currentVal, []byte{' '}), e.field.name)
 				mapping[sid] = append(mapping[sid], item{field: e.field, value: bytes.Join(currentVal, []byte{' '})})
 			}
 		}
