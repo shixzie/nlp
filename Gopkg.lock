@@ -8,6 +8,12 @@
   revision = "e2d8def04c9a19893aba223c21899c77089651ee"
 
 [[projects]]
+  name = "github.com/mna/pigeon"
+  packages = [".","ast","builder"]
+  revision = "9df264905d4734c0133161d8c67828ff522b154a"
+  version = "v1.0.0"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/text"
   packages = ["transform"]
@@ -16,6 +22,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2d8070e7ab96e0eba3aab3e85040589a8066cf6925e7cc1a8ca44786a4ebd349"
+  inputs-digest = "acd00ef0af5095f120392b70a2a271a964dfe7640bb75904b235a252ae866d2f"
   solver-name = "gps-cdcl"
   solver-version = 1
