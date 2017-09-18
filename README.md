@@ -20,7 +20,7 @@ time.Duration
 
 ## Installation
 ```
-go get github.com/shixzie/nlp
+go get -u github.com/shixzie/nlp
 ```
 
 **Go 1.7+ is required**
