@@ -16,13 +16,13 @@ func TestParseSample(t *testing.T) {
 		want    []Token
 		wantErr bool
 	}{
-		{
+		0: {
 			"err: empty sample",
 			args{0, nil},
 			nil,
 			true,
 		},
-		{
+		1: {
 			"normal sample",
 			args{1, []byte("play {Name} from {Artist}")},
 			[]Token{
@@ -33,7 +33,7 @@ func TestParseSample(t *testing.T) {
 			},
 			false,
 		},
-		{
+		2: {
 			"spacing inside keys",
 			args{1, []byte("play { 	Name} from {	Artist		}")},
 			[]Token{
@@ -41,6 +41,18 @@ func TestParseSample(t *testing.T) {
 				{Kw: true, Val: []byte("Name")},
 				{Val: []byte("from")},
 				{Kw: true, Val: []byte("Artist")},
+			},
+			false,
+		},
+		3: {
+			"multi word",
+			args{1, []byte("I need {Name} since {Since}")},
+			[]Token{
+				{Val: []byte("I")},
+				{Val: []byte("need")},
+				{Kw: true, Val: []byte("Name")},
+				{Val: []byte("since")},
+				{Kw: true, Val: []byte("Since")},
 			},
 			false,
 		},

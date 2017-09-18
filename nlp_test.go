@@ -34,6 +34,7 @@ func TestNL_P(t *testing.T) {
 		"dur {Dur}",
 		"string {String} int {Int}",
 		"string {String} time {Time}",
+		"need {String} since {Time}",
 	}
 
 	nl := New()
@@ -55,37 +56,37 @@ func TestNL_P(t *testing.T) {
 		expression string
 		want       *T
 	}{
-		{
+		0: {
 			"string",
 			"string Hello World",
 			&T{String: "Hello World"},
 		},
-		{
+		1: {
 			"int",
 			"int 42",
 			&T{Int: 42},
 		},
-		{
+		2: {
 			"uint",
 			"uint 43",
 			&T{Uint: 43},
 		},
-		{
+		3: {
 			"float",
 			"float 44",
 			&T{Float: 44},
 		},
-		{
+		4: {
 			"time",
 			"time 05-18-1999_6:42pm",
 			&T{Time: tim},
 		},
-		{
+		5: {
 			"duration",
 			"dur 4h2m",
 			&T{Dur: dur},
 		},
-		{
+		6: {
 			"string int",
 			"string Lmao int 42",
 			&T{
@@ -93,11 +94,19 @@ func TestNL_P(t *testing.T) {
 				Int:    42,
 			},
 		},
-		{
+		7: {
 			"string time",
 			"string What's Up Boy time 05-18-1999_6:42pm",
 			&T{
 				String: "What's Up Boy",
+				Time:   tim,
+			},
+		},
+		8: {
+			"word string time",
+			"Hi, I am Patrice, I need Issue#4 since 05-18-1999_6:42pm",
+			&T{
+				String: "Issue#4",
 				Time:   tim,
 			},
 		},
