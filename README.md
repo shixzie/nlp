@@ -20,10 +20,9 @@ time.Duration
 
 ## Installation
 ```
+// go1.8+ is required
 go get -u github.com/shixzie/nlp
 ```
-
-**Go 1.7+ is required**
 
 
 **Feel free to create PR's and open Issues :)**
