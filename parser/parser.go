@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"sort"
 	"strings"
@@ -218,18 +219,19 @@ var g = &grammar{
 			},
 		},
 		{
-			name:        "Identifier",
-			displayName: "\"identifier\"",
+			name:        "Punct",
+			displayName: "\"punct\"",
 			pos:         position{line: 63, col: 1, offset: 1422},
 			expr: &actionExpr{
-				pos: position{line: 64, col: 3, offset: 1448},
-				run: (*parser).callonIdentifier1,
+				pos: position{line: 64, col: 3, offset: 1438},
+				run: (*parser).callonPunct1,
 				expr: &oneOrMoreExpr{
-					pos: position{line: 64, col: 3, offset: 1448},
+					pos: position{line: 64, col: 3, offset: 1438},
 					expr: &charClassMatcher{
-						pos:        position{line: 64, col: 3, offset: 1448},
-						val:        "[^{} \\t\\r\\n]",
-						chars:      []rune{'{', '}', ' ', '\t', '\r', '\n'},
+						pos:        position{line: 64, col: 3, offset: 1438},
+						val:        "[^a-zA-Z0-9{} ]",
+						chars:      []rune{'{', '}', ' '},
+						ranges:     []rune{'a', 'z', 'A', 'Z', '0', '9'},
 						ignoreCase: false,
 						inverted:   true,
 					},
@@ -237,23 +239,51 @@ var g = &grammar{
 			},
 		},
 		{
+			name:        "Identifier",
+			displayName: "\"identifier\"",
+			pos:         position{line: 69, col: 1, offset: 1496},
+			expr: &choiceExpr{
+				pos: position{line: 70, col: 3, offset: 1522},
+				alternatives: []interface{}{
+					&ruleRefExpr{
+						pos:  position{line: 70, col: 3, offset: 1522},
+						name: "Punct",
+					},
+					&actionExpr{
+						pos: position{line: 70, col: 11, offset: 1530},
+						run: (*parser).callonIdentifier3,
+						expr: &oneOrMoreExpr{
+							pos: position{line: 70, col: 11, offset: 1530},
+							expr: &charClassMatcher{
+								pos:        position{line: 70, col: 11, offset: 1530},
+								val:        "[^{} \\t\\r\\n]",
+								chars:      []rune{'{', '}', ' ', '\t', '\r', '\n'},
+								ignoreCase: false,
+								inverted:   true,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name:        "Spacing",
 			displayName: "\"spacing\"",
-			pos:         position{line: 68, col: 1, offset: 1502},
+			pos:         position{line: 74, col: 1, offset: 1584},
 			expr: &choiceExpr{
-				pos: position{line: 69, col: 3, offset: 1522},
+				pos: position{line: 75, col: 3, offset: 1604},
 				alternatives: []interface{}{
 					&oneOrMoreExpr{
-						pos: position{line: 69, col: 3, offset: 1522},
+						pos: position{line: 75, col: 3, offset: 1604},
 						expr: &ruleRefExpr{
-							pos:  position{line: 69, col: 3, offset: 1522},
+							pos:  position{line: 75, col: 3, offset: 1604},
 							name: "Space",
 						},
 					},
 					&oneOrMoreExpr{
-						pos: position{line: 69, col: 12, offset: 1531},
+						pos: position{line: 75, col: 12, offset: 1613},
 						expr: &ruleRefExpr{
-							pos:  position{line: 69, col: 12, offset: 1531},
+							pos:  position{line: 75, col: 12, offset: 1613},
 							name: "_",
 						},
 					},
@@ -263,9 +293,9 @@ var g = &grammar{
 		{
 			name:        "Space",
 			displayName: "\"Space\"",
-			pos:         position{line: 71, col: 1, offset: 1535},
+			pos:         position{line: 77, col: 1, offset: 1617},
 			expr: &litMatcher{
-				pos:        position{line: 72, col: 3, offset: 1551},
+				pos:        position{line: 78, col: 3, offset: 1633},
 				val:        " ",
 				ignoreCase: false,
 			},
@@ -273,9 +303,9 @@ var g = &grammar{
 		{
 			name:        "_",
 			displayName: "\"whitespace\"",
-			pos:         position{line: 74, col: 1, offset: 1556},
+			pos:         position{line: 80, col: 1, offset: 1638},
 			expr: &charClassMatcher{
-				pos:        position{line: 75, col: 3, offset: 1573},
+				pos:        position{line: 81, col: 3, offset: 1655},
 				val:        "[\\t\\r\\n]",
 				chars:      []rune{'\t', '\r', '\n'},
 				ignoreCase: false,
@@ -346,14 +376,24 @@ func (p *parser) callonKeyword28() (interface{}, error) {
 	return p.cur.onKeyword28(stack["v"])
 }
 
-func (c *current) onIdentifier1() (interface{}, error) {
+func (c *current) onPunct1() (interface{}, error) {
 	return Token{Val: c.text}, nil
 }
 
-func (p *parser) callonIdentifier1() (interface{}, error) {
+func (p *parser) callonPunct1() (interface{}, error) {
 	stack := p.vstack[len(p.vstack)-1]
 	_ = stack
-	return p.cur.onIdentifier1()
+	return p.cur.onPunct1()
+}
+
+func (c *current) onIdentifier3() (interface{}, error) {
+	return Token{Val: c.text}, nil
+}
+
+func (p *parser) callonIdentifier3() (interface{}, error) {
+	stack := p.vstack[len(p.vstack)-1]
+	_ = stack
+	return p.cur.onIdentifier3()
 }
 
 var (
@@ -363,11 +403,28 @@ var (
 	// errInvalidEncoding is returned when the source is not properly
 	// utf8-encoded.
 	errInvalidEncoding = errors.New("invalid encoding")
+
+	// errMaxExprCnt is used to signal that the maximum number of
+	// expressions have been parsed.
+	errMaxExprCnt = errors.New("max number of expresssions parsed")
 )
 
 // Option is a function that can set an option on the parser. It returns
 // the previous setting as an Option.
 type Option func(*parser) Option
+
+// MaxExpressions creates an Option to stop parsing after the provided
+// number of expressions have been parsed, if the value is 0 then the parser will
+// parse for as many steps as needed (possibly an infinite number).
+//
+// The default for maxExprCnt is 0.
+func MaxExpressions(maxExprCnt uint64) Option {
+	return func(p *parser) Option {
+		oldMaxExprCnt := p.maxExprCnt
+		p.maxExprCnt = maxExprCnt
+		return MaxExpressions(oldMaxExprCnt)
+	}
+}
 
 // Debug creates an Option to set the debug flag to b. When set to true,
 // debugging information is printed to stdout while parsing.
@@ -631,6 +688,11 @@ func newParser(filename string, b []byte, opts ...Option) *parser {
 		maxFailExpected: make([]string, 0, 20),
 	}
 	p.setOptions(opts)
+
+	if p.maxExprCnt == 0 {
+		p.maxExprCnt = math.MaxUint64
+	}
+
 	return p
 }
 
@@ -671,13 +733,17 @@ type parser struct {
 	// rule stack, allows identification of the current rule in errors
 	rstack []*rule
 
-	// stats
-	exprCnt int
-
 	// parse fail
 	maxFailPos            position
 	maxFailExpected       []string
 	maxFailInvertExpected bool
+
+	// stats and used for stopping the parser
+	// after a maximum number of expressions are parsed
+	exprCnt uint64
+
+	// max number of expressions to be parsed
+	maxExprCnt uint64
 }
 
 // push a variable set on the vstack.
@@ -900,6 +966,7 @@ func (p *parser) parse(g *grammar) (val interface{}, err error) {
 			}
 			p.addErrAt(errors.New("no match found, expected: "+listJoin(expected, ", ", "or")), p.maxFailPos, expected)
 		}
+
 		return nil, p.errs.err()
 	}
 	return val, p.errs.err()
@@ -958,6 +1025,10 @@ func (p *parser) parseExpr(expr interface{}) (interface{}, bool) {
 	}
 
 	p.exprCnt++
+	if p.exprCnt > p.maxExprCnt {
+		panic(errMaxExprCnt)
+	}
+
 	var val interface{}
 	var ok bool
 	switch expr := expr.(type) {

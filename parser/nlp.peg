@@ -60,8 +60,14 @@ Keyword "keyword"
 }
 
 
+Punct "punct"
+= [^a-zA-Z0-9{} ]+ {
+    return Token{Val: c.text}, nil
+}
+
+
 Identifier "identifier"
-= [^{} \t\r\n]+ {
+= Punct / [^{} \t\r\n]+ {
     return Token{Val: c.text}, nil
 }
 
