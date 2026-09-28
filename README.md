@@ -1,6 +1,6 @@
-[![GoDoc](https://godoc.org/github.com/shixzie/nlp?status.svg)](https://godoc.org/github.com/shixzie/nlp) 
+[![GoDoc](https://pkg.go.dev/badge/github.com/shixzie/nlp.svg)](https://pkg.go.dev/github.com/shixzie/nlp) 
 [![Go Report Card](https://goreportcard.com/badge/github.com/shixzie/nlp)](https://goreportcard.com/report/github.com/shixzie/nlp)
-[![Build Status](https://travis-ci.org/shixzie/nlp.svg?branch=master)](https://travis-ci.org/shixzie/nlp)
+[![CI](https://github.com/shixzie/nlp/actions/workflows/ci.yml/badge.svg)](https://github.com/shixzie/nlp/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/shixzie/nlp/branch/master/graph/badge.svg)](https://codecov.io/gh/shixzie/nlp)
 
 
@@ -20,8 +20,8 @@ time.Duration
 
 ## Installation
 ```
-// go1.8+ is required
-go get -u github.com/shixzie/nlp
+// go1.21+ is required
+go get github.com/shixzie/nlp@latest
 ```
 
 
@@ -32,7 +32,7 @@ go get -u github.com/shixzie/nlp
 You will always begin by creating a NL type calling nlp.New(), the NL type is a 
 Natural Language Processor that owns 3 funcs, RegisterModel(), Learn() and P().
 
-### RegisterModel(i interface{}, samples []string, ops ...ModelOption) error
+### RegisterModel(i any, samples []string, ops ...ModelOption) error
 
 RegisterModel takes 3 parameters, an empty struct, a set of samples and some options for the model.
 
@@ -111,7 +111,7 @@ those texts.
 
 **Note that you must call NL.Learn() after all models are registrated and before calling NL.P()**
 
-### P(expr string) interface{}
+### P(expr string) any
 
 P first asks the trained algorithm which model should be used, once we get
 the right *and already trained* model, we just make it fit the expression.

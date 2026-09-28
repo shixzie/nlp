@@ -53,7 +53,7 @@ func BenchmarkNL_P(b *testing.B) {
 	cases := []struct {
 		name       string
 		expression string
-		want       interface{}
+		want       any
 	}{
 		{
 			"string",
