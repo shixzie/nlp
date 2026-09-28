@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: ["1.21", "stable"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+      - run: go vet ./...
+      - run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+      - uses: codecov/codecov-action@v4
+        if: matrix.go == 'stable'
+        with:
+          files: coverage.txt
+        continue-on-error: true

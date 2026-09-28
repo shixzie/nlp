@@ -1,14 +1,17 @@
+PIGEON_VERSION ?= v1.3.0
+
 help:
-	@echo "deps   -> Get all dependencies"
+	@echo "deps   -> Download all dependencies"
 	@echo "parser -> Generates the sample parser"
 	@echo "tests  -> Run all tests"
 
 deps:
-	@go get -u github.com/golang/dep/cmd/dep
-	@dep ensure
+	@go mod download
 
 parser:
-	@pigeon -o "./parser/parser.go" "./parser/nlp.peg"
+	@go run github.com/mna/pigeon@$(PIGEON_VERSION) -o "./parser/parser.go" "./parser/nlp.peg"
 
 tests:
 	@go test -v -race ./...
+
+.PHONY: help deps parser tests

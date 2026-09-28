@@ -1,2 +1,5 @@
 # dependencies
-vendor
+vendor/
+
+# test output
+coverage.txt

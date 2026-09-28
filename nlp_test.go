@@ -127,7 +127,7 @@ func TestNL_RegisterModel(t *testing.T) {
 		Output *bytes.Buffer
 	}
 	type args struct {
-		i       interface{}
+		i       any
 		samples []string
 		ops     []ModelOption
 	}

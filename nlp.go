@@ -30,7 +30,7 @@ func New() *NL { return &NL{Output: bytes.NewBufferString("")} }
 // P proccesses the expr and returns one of
 // the types passed as the i parameter to the RegistryModel
 // func filled with the data inside expr
-func (nl *NL) P(expr string) interface{} { return nl.models[nl.naive.Predict(expr)].fit(expr) }
+func (nl *NL) P(expr string) any { return nl.models[nl.naive.Predict(expr)].fit(expr) }
 
 // Learn maps the models samples to the models themselves and
 // returns an error if something occurred while learning
@@ -85,7 +85,7 @@ type item struct {
 type field struct {
 	index int
 	name  string
-	kind  interface{}
+	kind  any
 }
 
 // ModelOption is an option for a specific model
@@ -123,7 +123,7 @@ func WithTimeLocation(loc *time.Location) ModelOption {
 // Samples must have special formatting:
 //
 //	"play {Name} by {Artist}"
-func (nl *NL) RegisterModel(i interface{}, samples []string, ops ...ModelOption) error {
+func (nl *NL) RegisterModel(i any, samples []string, ops ...ModelOption) error {
 	if i == nil {
 		return fmt.Errorf("can't create model from nil value")
 	}
@@ -295,7 +295,7 @@ func selectBestMapping(scores []int) int {
 	return bestMapping
 }
 
-func (m *model) fit(expr string) interface{} {
+func (m *model) fit(expr string) any {
 	val := reflect.New(m.tpy)
 	if len(expr) == 0 {
 		return val.Interface()
